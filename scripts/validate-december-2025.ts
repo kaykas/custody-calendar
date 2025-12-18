@@ -1,4 +1,4 @@
-import { CustodyCalendarEngine } from '../lib/calendar-engine.ts';
+import { CustodyCalendarEngine } from '../lib/calendar-engine';
 import { format, isWithinInterval } from 'date-fns';
 
 console.log('='.repeat(80));
