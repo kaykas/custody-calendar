@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CustodyEvent {
+  id          String   @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  custodyType String   // "regular", "weekend", "summer", "holiday", "special"
+  parent      String   // "mother" or "father"
+  title       String
+  description String?
+  priority    Int      @default(0) // Higher priority overrides lower
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startDate, endDate])
+  @@index([custodyType])
+}
+
+model Holiday {
+  id          String   @id @default(cuid())
+  name        String
+  yearParity  String   // "even", "odd", or "all"
+  parent      String   // "mother" or "father"
+  dateRule    String   // How to calculate the date (e.g., "12-25" for Christmas)
+  priority    Int      @default(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, yearParity])
+}
+
+model ScheduleRule {
+  id          String   @id @default(cuid())
+  ruleType    String   // "regular", "summer", "holiday", "special"
+  parent      String   // "mother" or "father"
+  description String
+  pattern     String   // JSON string describing the pattern
+  priority    Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model GoogleCalendarAuth {
+  id           String   @id @default(cuid())
+  userId       String   @unique // For multi-user support in future
+  accessToken  String
+  refreshToken String
+  tokenType    String   @default("Bearer")
+  expiresAt    DateTime
+  scope        String
+  calendarId   String? // Google Calendar ID where events are synced
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SyncStatus {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  lastSyncAt        DateTime?
+  lastSyncStatus    String   @default("never_synced") // "success", "partial", "failed", "never_synced"
+  lastSyncError     String?
+  totalEventsSynced Int      @default(0)
+  syncInProgress    Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([lastSyncAt])
+}
+
+model CalendarEventMapping {
+  id               String   @id @default(cuid())
+  custodyEventId   String   // Reference to CustodyEvent.id
+  googleEventId    String   // Google Calendar Event ID
+  calendarId       String   // Google Calendar ID
+  lastSyncedAt     DateTime
+  syncStatus       String   @default("synced") // "synced", "needs_update", "conflict", "deleted"
+  localLastUpdated DateTime // CustodyEvent.updatedAt at time of sync
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([custodyEventId, googleEventId])
+  @@index([custodyEventId])
+  @@index([googleEventId])
+  @@index([syncStatus])
+}
