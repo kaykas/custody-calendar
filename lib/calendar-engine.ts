@@ -12,6 +12,7 @@ import {
   startOfWeek,
   getDay,
 } from 'date-fns';
+import { getPickupDropoffDescription, thornhillSchedule } from './school-schedule';
 
 export interface CustodyEvent {
   id: string;
@@ -269,6 +270,18 @@ export class CustodyCalendarEngine {
         fridayEnd.setDate(fridayEnd.getDate() + 1);
         fridayEnd.setHours(8, 0, 0, 0);
 
+        // Generate school-aware description
+        const thursdaySchedule = thornhillSchedule.getScheduleForDate(currentDate);
+        const fridaySchedule = thornhillSchedule.getScheduleForDate(fridayEnd);
+
+        const pickupDesc = thursdaySchedule.isSchoolDay
+          ? getPickupDropoffDescription(currentDate, true, '6:00 PM')
+          : 'Pickup at 6:00 PM (non-school day)';
+
+        const dropoffDesc = fridaySchedule.isSchoolDay
+          ? getPickupDropoffDescription(fridayEnd, false, '8:00 AM')
+          : 'Dropoff at 8:00 AM (non-school day)';
+
         events.push({
           id: `regular-thu-${format(currentDate, 'yyyy-MM-dd')}`,
           startDate: thursdayStart,
@@ -276,7 +289,7 @@ export class CustodyCalendarEngine {
           custodyType: 'regular',
           parent: 'father',
           title: 'Thursday Night',
-          description: 'Regular Thursday overnight custody',
+          description: `${pickupDesc} → ${dropoffDesc}`,
           priority: 10,
         });
       }
@@ -315,6 +328,19 @@ export class CustodyCalendarEngine {
       const sundayEnd = addDays(currentWeekend, 2); // Sunday
       sundayEnd.setHours(18, 0, 0, 0); // 6pm Sunday
 
+      // Generate school-aware description
+      const fridaySchedule = thornhillSchedule.getScheduleForDate(currentWeekend);
+      const mondayAfter = addDays(sundayEnd, 1);
+      const mondaySchedule = thornhillSchedule.getScheduleForDate(mondayAfter);
+
+      const pickupDesc = fridaySchedule.isSchoolDay
+        ? getPickupDropoffDescription(currentWeekend, true, '6:00 PM')
+        : 'Pickup at 6:00 PM Friday (non-school day)';
+
+      const dropoffDesc = mondaySchedule.isSchoolDay
+        ? getPickupDropoffDescription(mondayAfter, false, '8:00 AM')
+        : 'Dropoff at 6:00 PM Sunday';
+
       events.push({
         id: `weekend-${format(currentWeekend, 'yyyy-MM-dd')}`,
         startDate: fridayStart,
@@ -322,7 +348,7 @@ export class CustodyCalendarEngine {
         custodyType: 'weekend',
         parent: isFatherWeekend ? 'father' : 'mother',
         title: `${isFatherWeekend ? "Father's" : "Mother's"} Weekend`,
-        description: `Alternating weekend custody`,
+        description: `${pickupDesc} → ${dropoffDesc}`,
         priority: 20,
       });
 
@@ -509,6 +535,8 @@ export class CustodyCalendarEngine {
         // to ensure the court-ordered schedule is followed exactly
 
         // Mother: Dec 18 school pickup → Dec 22 at 11am
+        const dec18 = new Date(2025, 11, 18);
+        const dec18Schedule = thornhillSchedule.getScheduleForDate(dec18);
         events.push({
           id: 'winter-break-2025-1',
           startDate: new Date(2025, 11, 18, 15, 0, 0), // Dec 18, 3pm (school pickup)
@@ -516,7 +544,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 1',
-          description: 'Court ordered 2025 winter break schedule',
+          description: `Pickup at ${thornhillSchedule.schoolName} after dismissal (Basil: ${dec18Schedule.dismissalTime.secondGrade}, Alfie: ${dec18Schedule.dismissalTime.kindergarten}) on Dec 18 → Exchange at 11:00 AM on Dec 22`,
           priority: 200,
         });
 
@@ -528,7 +556,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 2',
-          description: 'Court ordered 2025 winter break schedule',
+          description: 'Exchange at 11:00 AM on Dec 22 → Exchange at 11:00 AM on Dec 25 (Christmas Day)',
           priority: 200,
         });
 
@@ -540,7 +568,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 3',
-          description: 'Court ordered 2025 winter break schedule',
+          description: 'Exchange at 11:00 AM on Dec 25 (Christmas Day) → Exchange at 11:00 AM on Dec 29',
           priority: 200,
         });
 
@@ -552,19 +580,21 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 4',
-          description: 'Court ordered 2025 winter break schedule',
+          description: 'Exchange at 11:00 AM on Dec 29 → Exchange at 11:00 AM on Jan 2 (includes Scott\'s birthday Dec 31)',
           priority: 200,
         });
 
-        // Mother: Jan 2 at 11am → Jan 5 school dropoff
+        // Mother: Jan 2 at 11am → Jan 6 school dropoff (Jan 5 is PD day)
+        const jan6 = new Date(2026, 0, 6);
+        const jan6Schedule = thornhillSchedule.getScheduleForDate(jan6);
         events.push({
           id: 'winter-break-2025-5',
           startDate: new Date(2026, 0, 2, 11, 0, 0), // Jan 2, 11am
-          endDate: new Date(2026, 0, 5, 8, 0, 0), // Jan 5, 8am (school dropoff)
+          endDate: new Date(2026, 0, 6, 8, 0, 0), // Jan 6, 8am (school dropoff - first day back)
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 5',
-          description: 'Court ordered 2025 winter break schedule',
+          description: `Exchange at 11:00 AM on Jan 2 → Dropoff at ${thornhillSchedule.schoolName} for school start (Basil: ${jan6Schedule.dropoffTime.secondGrade}, Alfie: ${jan6Schedule.dropoffTime.kindergarten}) on Jan 6 (first day back - Jan 5 is PD day)`,
           priority: 200,
         });
       } else {
