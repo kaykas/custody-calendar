@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "validate": "tsx scripts/validate-calendar.ts",
+    "validate:dec2025": "tsx scripts/validate-december-2025.ts",
     "test": "jest",
     "test:watch": "jest --watch"
   },

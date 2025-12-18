@@ -43,10 +43,16 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--warm-bg)' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading calendar...</p>
+          <div
+            className="animate-spin rounded-full h-12 w-12 mx-auto mb-4"
+            style={{
+              border: '3px solid var(--mother-lighter)',
+              borderTop: '3px solid var(--mother-primary)'
+            }}
+          ></div>
+          <p style={{ color: 'var(--mother-primary)' }}>Loading your calendar...</p>
         </div>
       </div>
     );
@@ -54,8 +60,8 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center text-red-600">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--warm-bg)' }}>
+        <div className="text-center" style={{ color: '#DC2626' }}>
           <p className="text-xl font-semibold mb-2">Error loading calendar</p>
           <p>{error}</p>
         </div>
@@ -64,7 +70,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--warm-bg)' }}>
       <CalendarView events={events} />
     </div>
   );

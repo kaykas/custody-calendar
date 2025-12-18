@@ -85,19 +85,20 @@ const HOLIDAYS: HolidayRule[] = [
     priority: 100,
   },
   {
+    name: "Halloween",
+    yearParity: 'even',
+    parent: 'father',
+    dateRule: '10-31',
+    priority: 100,
+  },
+  {
     name: "Thanksgiving",
     yearParity: 'even',
     parent: 'mother',
     dateRule: (year: number) => getNthWeekdayOfMonth(year, 10, 4, 4), // 4th Thursday of November
     priority: 100,
   },
-  {
-    name: "Christmas Break (First Half)",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: '12-20', // Placeholder - from last day of school until 12/26 noon
-    priority: 100,
-  },
+  // Winter Break is handled separately in generateWinterBreak() method
 
   // Father's holidays (odd years)
   {
@@ -150,35 +151,20 @@ const HOLIDAYS: HolidayRule[] = [
     priority: 100,
   },
   {
+    name: "Halloween",
+    yearParity: 'odd',
+    parent: 'mother',
+    dateRule: '10-31',
+    priority: 100,
+  },
+  {
     name: "Thanksgiving",
     yearParity: 'odd',
     parent: 'father',
     dateRule: (year: number) => getNthWeekdayOfMonth(year, 10, 4, 4),
     priority: 100,
   },
-  {
-    name: "Christmas Break (First Half)",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: '12-20',
-    priority: 100,
-  },
-
-  // Christmas Break second half (alternates opposite)
-  {
-    name: "Christmas Break (Second Half)",
-    yearParity: 'even',
-    parent: 'father',
-    dateRule: '12-26', // From 12/26 noon until school resumes
-    priority: 100,
-  },
-  {
-    name: "Christmas Break (Second Half)",
-    yearParity: 'odd',
-    parent: 'mother',
-    dateRule: '12-26',
-    priority: 100,
-  },
+  // Winter Break is handled separately in generateWinterBreak() method
 
   // Special events (every year)
   {
@@ -233,8 +219,11 @@ export class CustodyCalendarEngine {
   private summerEndDate: Date;
 
   constructor(
-    summerStartDate: Date = new Date(2025, 5, 8), // June 8, 2025
-    summerEndDate: Date = new Date(2025, 7, 8) // August 8, 2025
+    // TODO: Implement school calendar configuration system
+    // Summer dates should be calculated based on actual school district calendar
+    // For 2025-2026 school year, using reasonable defaults
+    summerStartDate: Date = new Date(2025, 5, 8), // June 8, 2025 (approximate)
+    summerEndDate: Date = new Date(2025, 7, 8) // August 8, 2025 (approximate)
   ) {
     this.summerStartDate = summerStartDate;
     this.summerEndDate = summerEndDate;
@@ -251,6 +240,7 @@ export class CustodyCalendarEngine {
     events.push(...this.generateWeekendSchedule(startDate, endDate));
     events.push(...this.generateSummerSchedule(startDate, endDate));
     events.push(...this.generateHolidays(startDate, endDate));
+    events.push(...this.generateWinterBreak(startDate, endDate));
     events.push(...this.generateSpecialEvents(startDate, endDate));
 
     // Resolve conflicts by priority
@@ -491,6 +481,143 @@ export class CustodyCalendarEngine {
   }
 
   /**
+   * Generate Winter Break custody schedule
+   * 2025: Specific court-ordered schedule
+   * 2026+: Dynamic calculation based on school calendar with even/odd year split
+   */
+  private generateWinterBreak(
+    startDate: Date,
+    endDate: Date
+  ): CustodyEvent[] {
+    const events: CustodyEvent[] = [];
+    const startYear = getYear(startDate);
+    const endYear = getYear(endDate);
+
+    for (let year = startYear; year <= endYear; year++) {
+      // Check if winter break dates fall within requested range
+      const winterBreakStart = new Date(year, 11, 18); // Dec 18
+      const winterBreakEnd = new Date(year + 1, 0, 5); // Jan 5 of next year
+
+      // Skip if no overlap
+      if (winterBreakEnd < startDate || winterBreakStart > endDate) {
+        continue;
+      }
+
+      if (year === 2025) {
+        // 2025-2026 Winter Break: Specific court order schedule
+        // Priority 200: Higher than birthdays (150) and other holidays (100)
+        // to ensure the court-ordered schedule is followed exactly
+
+        // Mother: Dec 18 school pickup → Dec 22 at 11am
+        events.push({
+          id: 'winter-break-2025-1',
+          startDate: new Date(2025, 11, 18, 15, 0, 0), // Dec 18, 3pm (school pickup)
+          endDate: new Date(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
+          custodyType: 'holiday',
+          parent: 'mother',
+          title: 'Winter Break 2025 - Period 1',
+          description: 'Court ordered 2025 winter break schedule',
+          priority: 200,
+        });
+
+        // Father: Dec 22 at 11am → Dec 25 at 11am
+        events.push({
+          id: 'winter-break-2025-2',
+          startDate: new Date(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
+          endDate: new Date(2025, 11, 25, 11, 0, 0), // Dec 25, 11am
+          custodyType: 'holiday',
+          parent: 'father',
+          title: 'Winter Break 2025 - Period 2',
+          description: 'Court ordered 2025 winter break schedule',
+          priority: 200,
+        });
+
+        // Mother: Dec 25 at 11am → Dec 29 at 11am
+        events.push({
+          id: 'winter-break-2025-3',
+          startDate: new Date(2025, 11, 25, 11, 0, 0), // Dec 25, 11am
+          endDate: new Date(2025, 11, 29, 11, 0, 0), // Dec 29, 11am
+          custodyType: 'holiday',
+          parent: 'mother',
+          title: 'Winter Break 2025 - Period 3',
+          description: 'Court ordered 2025 winter break schedule',
+          priority: 200,
+        });
+
+        // Father: Dec 29 at 11am → Jan 2 at 11am
+        events.push({
+          id: 'winter-break-2025-4',
+          startDate: new Date(2025, 11, 29, 11, 0, 0), // Dec 29, 11am
+          endDate: new Date(2026, 0, 2, 11, 0, 0), // Jan 2, 11am
+          custodyType: 'holiday',
+          parent: 'father',
+          title: 'Winter Break 2025 - Period 4',
+          description: 'Court ordered 2025 winter break schedule',
+          priority: 200,
+        });
+
+        // Mother: Jan 2 at 11am → Jan 5 school dropoff
+        events.push({
+          id: 'winter-break-2025-5',
+          startDate: new Date(2026, 0, 2, 11, 0, 0), // Jan 2, 11am
+          endDate: new Date(2026, 0, 5, 8, 0, 0), // Jan 5, 8am (school dropoff)
+          custodyType: 'holiday',
+          parent: 'mother',
+          title: 'Winter Break 2025 - Period 5',
+          description: 'Court ordered 2025 winter break schedule',
+          priority: 200,
+        });
+      } else {
+        // 2026+ Winter Break: Dynamic calculation
+        // TODO: Implement school calendar integration to get actual last day of school and first day back
+        // For now, using reasonable approximations based on typical school calendars
+
+        // Assume winter break is approximately Dec 20 through Jan 3
+        // Last day of school before break (approximate)
+        const lastDayOfSchool = new Date(year, 11, 20, 15, 0, 0); // Dec 20, 3pm
+        // First day back at school (approximate)
+        const firstDayBack = new Date(year + 1, 0, 3, 8, 0, 0); // Jan 3, 8am
+
+        // Calculate midpoint for exchange
+        const breakStart = lastDayOfSchool.getTime();
+        const breakEnd = firstDayBack.getTime();
+        const midpoint = new Date((breakStart + breakEnd) / 2);
+
+        const isEvenYear = year % 2 === 0;
+
+        // Even years: Mother gets first half, Father gets second half
+        // Odd years: Father gets first half, Mother gets second half
+        const firstHalfParent = isEvenYear ? 'mother' : 'father';
+        const secondHalfParent = isEvenYear ? 'father' : 'mother';
+
+        events.push({
+          id: `winter-break-${year}-first`,
+          startDate: lastDayOfSchool,
+          endDate: midpoint,
+          custodyType: 'holiday',
+          parent: firstHalfParent,
+          title: `Winter Break ${year} - First Half`,
+          description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${firstHalfParent} gets first half`,
+          priority: 100,
+        });
+
+        events.push({
+          id: `winter-break-${year}-second`,
+          startDate: midpoint,
+          endDate: firstDayBack,
+          custodyType: 'holiday',
+          parent: secondHalfParent,
+          title: `Winter Break ${year} - Second Half`,
+          description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${secondHalfParent} gets second half`,
+          priority: 100,
+        });
+      }
+    }
+
+    return events;
+  }
+
+  /**
    * Generate special events (birthdays, etc.)
    */
   private generateSpecialEvents(
@@ -501,13 +628,13 @@ export class CustodyCalendarEngine {
     const startYear = getYear(startDate);
     const endYear = getYear(endDate);
 
-    // Mother's birthday (November 29)
-    // Father's birthday (March 27)
+    // Mother's birthday (Alexandra - October 2)
+    // Father's birthday (Scott - December 31)
     // Children's birthdays would go here
 
     for (let year = startYear; year <= endYear; year++) {
-      const motherBirthday = new Date(year, 10, 29); // Nov 29
-      const fatherBirthday = new Date(year, 2, 27); // Mar 27
+      const motherBirthday = new Date(year, 9, 2); // Oct 2 (Alexandra)
+      const fatherBirthday = new Date(year, 11, 31); // Dec 31 (Scott)
 
       if (motherBirthday >= startDate && motherBirthday <= endDate) {
         events.push({

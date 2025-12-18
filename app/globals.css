@@ -3,6 +3,41 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Mother-Centric Color Palette */
+  --mother-primary: #9B7EBD;
+  --mother-light: #C5B3D9;
+  --mother-lighter: #E8E0F0;
+  --mother-accent: #B8A0D3;
+
+  /* Custody Type Colors - Mother */
+  --mother-regular: #E8E0F0;
+  --mother-weekend: #C5B3D9;
+  --mother-summer: #9B7EBD;
+  --mother-holiday: #8B6FAD;
+  --mother-special: #7B5F9D;
+
+  /* Father's Time - De-emphasized (Muted, Desaturated) */
+  --father-primary: #F5F5F5;
+  --father-light: #FAFAFA;
+  --father-border: #E8EAED;
+  --father-text: #9CA3AF;
+
+  /* Custody Type Colors - Father (Subtle) */
+  --father-regular: #F9FAFB;
+  --father-weekend: #F5F5F5;
+  --father-summer: #F0F0F0;
+  --father-holiday: #EBEBEB;
+  --father-special: #E5E5E5;
+
+  /* Warm Neutrals & Accents */
+  --warm-bg: #FDFCFB;
+  --warm-accent: #D4AF37;
+  --transition-indicator: #FFA07A;
+
+  /* UI Colors */
+  --shadow-soft: rgba(155, 126, 189, 0.08);
+  --shadow-medium: rgba(155, 126, 189, 0.12);
 }
 
 @theme inline {
@@ -20,7 +55,183 @@
 }
 
 body {
-  background: var(--background);
+  background: var(--warm-bg);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mother's Custody - Prominent & Warm */
+.mother-custody-day {
+  background: var(--mother-regular);
+  border: 2px solid var(--mother-light);
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mother-custody-day:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-medium);
+  border-color: var(--mother-primary);
+}
+
+.mother-custody-weekend {
+  background: var(--mother-weekend);
+  border: 2px solid var(--mother-accent);
+}
+
+.mother-custody-summer {
+  background: var(--mother-summer);
+  border: 2px solid var(--mother-primary);
+  color: white;
+}
+
+.mother-custody-holiday {
+  background: var(--mother-holiday);
+  border: 3px solid var(--warm-accent);
+  color: white;
+  box-shadow: 0 2px 8px var(--shadow-medium);
+}
+
+.mother-custody-special {
+  background: var(--mother-special);
+  border: 3px solid var(--warm-accent);
+  color: white;
+  box-shadow: 0 2px 8px var(--shadow-medium);
+}
+
+/* Father's Custody - Subtle & De-emphasized */
+.father-custody-day {
+  background: var(--father-regular);
+  border: 1px solid var(--father-border);
+  color: var(--father-text);
+  font-weight: 400;
+  font-size: 0.875rem;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 0, 0, 0.01) 10px,
+    rgba(0, 0, 0, 0.01) 20px
+  );
+}
+
+.father-custody-day:hover {
+  opacity: 0.95;
+}
+
+.father-custody-weekend {
+  background: var(--father-weekend);
+  border: 1px solid var(--father-border);
+}
+
+.father-custody-summer {
+  background: var(--father-summer);
+  border: 1px solid var(--father-border);
+}
+
+.father-custody-holiday {
+  background: var(--father-holiday);
+  border: 1px solid var(--father-border);
+}
+
+.father-custody-special {
+  background: var(--father-special);
+  border: 1px solid var(--father-border);
+}
+
+/* Soft transitions for calming effect */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card styling with warm shadows */
+.warm-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px var(--shadow-soft);
+  transition: box-shadow 0.3s ease;
+}
+
+.warm-card:hover {
+  box-shadow: 0 4px 16px var(--shadow-medium);
+}
+
+/* Mother-focused event card */
+.mother-event-card {
+  background: linear-gradient(135deg, var(--mother-lighter) 0%, var(--mother-light) 100%);
+  border: 2px solid var(--mother-accent);
+  border-radius: 8px;
+  padding: 1rem;
+  font-weight: 500;
+}
+
+/* Father-focused event card - minimal */
+.father-event-card {
+  background: var(--father-light);
+  border: 1px solid var(--father-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-weight: 400;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+/* Typography hierarchy */
+.mother-event-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mother-special);
+  letter-spacing: -0.01em;
+}
+
+.father-event-text {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--father-text);
+}
+
+/* Transition indicators */
+.transition-indicator {
+  background: var(--transition-indicator);
+  border-left: 4px solid var(--warm-accent);
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Focus mode styling */
+.focus-mode .father-custody-day {
+  display: none;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Smooth animations */
+@keyframes gentle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+
+.today-indicator {
+  animation: gentle-pulse 2s ease-in-out infinite;
 }
