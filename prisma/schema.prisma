@@ -24,6 +24,7 @@ model CustodyEvent {
 
   @@index([startDate, endDate])
   @@index([custodyType])
+  @@map("custody_events")
 }
 
 model Holiday {
