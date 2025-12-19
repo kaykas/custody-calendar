@@ -183,15 +183,34 @@ export class CustodyCalendarEngine {
       // the times explicitly specified in Sections 12 and 16.
 
       // Thursday overnight with MOTHER (school pickup Thursday to school dropoff Friday)
-      // Court Order Section 12a explicitly states Mother gets every Thursday night
+      // Court Order Section 12a: "Thursday afternoon school pickup to Friday morning school drop-off"
       if (dayOfWeek === 4) {
-        // Thursday
+        // Get school schedule to determine pickup time
+        const thursdaySchedule = thornhillSchedule.getScheduleForDate(currentDate);
+        const fridaySchedule = thornhillSchedule.getScheduleForDate(addDays(currentDate, 1));
+
+        // Thursday start: school dismissal time or 6 PM if no school
+        let thursdayStartHour = 18; // 6 PM default
+        let thursdayStartMinute = 0;
+        let pickupDesc: string;
+
+        if (thursdaySchedule.isSchoolDay) {
+          // Use school dismissal time (varies by grade)
+          // Basil (2nd grade) dismisses later, so use her time as the pickup
+          const dismissalTime = thursdaySchedule.dismissalTime.secondGrade;
+          [thursdayStartHour, thursdayStartMinute] = dismissalTime.split(':').map(Number);
+          pickupDesc = getPickupDropoffDescription(currentDate, true, dismissalTime);
+        } else {
+          pickupDesc = 'Pickup at 6:00 PM (non-school day)';
+        }
+
         const thursdayStart = createPacificDate(
           currentDate.getFullYear(),
           currentDate.getMonth(),
           currentDate.getDate(),
-          18, 0, 0 // 6:00 PM
+          thursdayStartHour, thursdayStartMinute, 0
         );
+
         const friday = addDays(currentDate, 1);
         const fridayEnd = createPacificDate(
           friday.getFullYear(),
@@ -200,16 +219,8 @@ export class CustodyCalendarEngine {
           8, 0, 0 // 8:00 AM Friday
         );
 
-        // Generate school-aware description
-        const thursdaySchedule = thornhillSchedule.getScheduleForDate(currentDate);
-        const fridaySchedule = thornhillSchedule.getScheduleForDate(fridayEnd);
-
-        const pickupDesc = thursdaySchedule.isSchoolDay
-          ? getPickupDropoffDescription(currentDate, true, '6:00 PM')
-          : 'Pickup at 6:00 PM (non-school day)';
-
         const dropoffDesc = fridaySchedule.isSchoolDay
-          ? getPickupDropoffDescription(fridayEnd, false, '8:00 AM')
+          ? getPickupDropoffDescription(friday, false, '8:00 AM')
           : 'Dropoff at 8:00 AM (non-school day)';
 
         events.push({
@@ -291,18 +302,18 @@ export class CustodyCalendarEngine {
           ? `${getPickupDropoffDescription(tuesdayMorning, false, '8:00 AM')} (Monday holiday - extended per Section 12d)`
           : 'Dropoff at 8:00 AM Tuesday (Monday was holiday)';
       } else {
-        // Standard weekend: Sunday 6 PM
-        const sundayEnd = addDays(currentWeekend, 2);
+        // Standard weekend: Monday morning school drop-off
+        // Court Order Section 12b: "Friday afternoon school pickup to Monday morning school drop-off"
         weekendEnd = createPacificDate(
-          sundayEnd.getFullYear(),
-          sundayEnd.getMonth(),
-          sundayEnd.getDate(),
-          18, 0, 0 // 6:00 PM Sunday
+          mondayAfter.getFullYear(),
+          mondayAfter.getMonth(),
+          mondayAfter.getDate(),
+          8, 0, 0 // 8:00 AM Monday (school dropoff time)
         );
 
         dropoffDesc = mondaySchedule.isSchoolDay
           ? getPickupDropoffDescription(mondayAfter, false, '8:00 AM')
-          : 'Dropoff at 6:00 PM Sunday';
+          : 'Dropoff at 8:00 AM Monday (non-school day)';
       }
 
       // Generate school-aware pickup description
