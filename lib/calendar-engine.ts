@@ -141,9 +141,9 @@ export class CustodyCalendarEngine {
   }
 
   /**
-   * Generate regular school year schedule (Thursday nights)
-   * Court Order Section 12a: "With Mother every week from Thursday afternoon
-   * school pickup to Friday morning school drop-off."
+   * Generate regular school year schedule (weeknight custody)
+   * Court Order Section 12a: "With Mother every week from Thursday afternoon school pickup to Friday morning school drop-off."
+   * Court Order Section 13a implies: "Monday through Wednesday for Father, and Thursday for Mother"
    */
   private generateRegularSchedule(
     startDate: Date,
@@ -154,6 +154,44 @@ export class CustodyCalendarEngine {
 
     while (currentDate <= endDate) {
       const dayOfWeek = getDay(currentDate);
+
+      // Monday, Tuesday, Wednesday overnight with FATHER
+      // Court Order Section 13a: "During each parents' respective weekday evening parenting time
+      // (Monday through Wednesday for Father, and Thursday for Mother)..."
+      if (dayOfWeek >= 1 && dayOfWeek <= 3) {
+        // Monday = 1, Tuesday = 2, Wednesday = 3
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = dayNames[dayOfWeek];
+        const nextDayName = dayNames[dayOfWeek + 1];
+
+        const nightStart = new Date(currentDate);
+        nightStart.setHours(18, 0, 0, 0); // 6:00 PM
+        const morningEnd = addDays(currentDate, 1);
+        morningEnd.setHours(8, 0, 0, 0); // 8:00 AM next day
+
+        // Generate school-aware description
+        const currentDaySchedule = thornhillSchedule.getScheduleForDate(currentDate);
+        const nextDaySchedule = thornhillSchedule.getScheduleForDate(morningEnd);
+
+        const pickupDesc = currentDaySchedule.isSchoolDay
+          ? getPickupDropoffDescription(currentDate, true, '6:00 PM')
+          : 'Pickup at 6:00 PM (non-school day)';
+
+        const dropoffDesc = nextDaySchedule.isSchoolDay
+          ? getPickupDropoffDescription(morningEnd, false, '8:00 AM')
+          : 'Dropoff at 8:00 AM (non-school day)';
+
+        events.push({
+          id: `regular-${dayName.toLowerCase()}-${format(currentDate, 'yyyy-MM-dd')}`,
+          startDate: nightStart,
+          endDate: morningEnd,
+          custodyType: 'regular',
+          parent: 'father',
+          title: `${dayName} Night`,
+          description: `${pickupDesc} → ${dropoffDesc}`,
+          priority: 10,
+        });
+      }
 
       // Thursday overnight with MOTHER (school pickup Thursday to school dropoff Friday)
       // Court Order Section 12a explicitly states Mother gets every Thursday night
@@ -198,6 +236,8 @@ export class CustodyCalendarEngine {
   /**
    * Generate alternating weekend schedule
    * Alternates between mother and father every other weekend
+   * Court Order Section 12d: "If a Monday is a school holiday, the custodial parent's time
+   * shall extend until Tuesday morning school drop-off."
    */
   private generateWeekendSchedule(
     startDate: Date,
@@ -220,29 +260,49 @@ export class CustodyCalendarEngine {
       const fridayStart = new Date(currentWeekend);
       fridayStart.setHours(18, 0, 0, 0); // 6pm Friday
 
-      const sundayEnd = addDays(currentWeekend, 2); // Sunday
-      sundayEnd.setHours(18, 0, 0, 0); // 6pm Sunday
-
-      // Generate school-aware description
-      const fridaySchedule = thornhillSchedule.getScheduleForDate(currentWeekend);
-      const mondayAfter = addDays(sundayEnd, 1);
+      // Check if Monday is a school holiday (Court Order Section 12d)
+      const mondayAfter = addDays(currentWeekend, 3); // Monday after weekend
       const mondaySchedule = thornhillSchedule.getScheduleForDate(mondayAfter);
+      const isMondayHoliday = !mondaySchedule.isSchoolDay;
 
+      // Determine weekend end time based on Monday school status
+      let weekendEnd: Date;
+      let dropoffDesc: string;
+
+      if (isMondayHoliday) {
+        // Court Order Section 12d: Extend to Tuesday morning if Monday is a holiday
+        const tuesdayMorning = addDays(mondayAfter, 1);
+        tuesdayMorning.setHours(8, 0, 0, 0);
+        weekendEnd = tuesdayMorning;
+
+        const tuesdaySchedule = thornhillSchedule.getScheduleForDate(tuesdayMorning);
+        dropoffDesc = tuesdaySchedule.isSchoolDay
+          ? `${getPickupDropoffDescription(tuesdayMorning, false, '8:00 AM')} (Monday holiday - extended per Section 12d)`
+          : 'Dropoff at 8:00 AM Tuesday (Monday was holiday)';
+      } else {
+        // Standard weekend: Sunday 6 PM
+        const sundayEnd = addDays(currentWeekend, 2);
+        sundayEnd.setHours(18, 0, 0, 0);
+        weekendEnd = sundayEnd;
+
+        dropoffDesc = mondaySchedule.isSchoolDay
+          ? getPickupDropoffDescription(mondayAfter, false, '8:00 AM')
+          : 'Dropoff at 6:00 PM Sunday';
+      }
+
+      // Generate school-aware pickup description
+      const fridaySchedule = thornhillSchedule.getScheduleForDate(currentWeekend);
       const pickupDesc = fridaySchedule.isSchoolDay
         ? getPickupDropoffDescription(currentWeekend, true, '6:00 PM')
         : 'Pickup at 6:00 PM Friday (non-school day)';
 
-      const dropoffDesc = mondaySchedule.isSchoolDay
-        ? getPickupDropoffDescription(mondayAfter, false, '8:00 AM')
-        : 'Dropoff at 6:00 PM Sunday';
-
       events.push({
         id: `weekend-${format(currentWeekend, 'yyyy-MM-dd')}`,
         startDate: fridayStart,
-        endDate: sundayEnd,
+        endDate: weekendEnd,
         custodyType: 'weekend',
         parent: isFatherWeekend ? 'father' : 'mother',
-        title: `${isFatherWeekend ? "Father's" : "Mother's"} Weekend`,
+        title: `${isFatherWeekend ? "Father's" : "Mother's"} Weekend${isMondayHoliday ? ' (Extended)' : ''}`,
         description: `${pickupDesc} → ${dropoffDesc}`,
         priority: 20,
       });
