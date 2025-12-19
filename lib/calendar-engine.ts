@@ -34,55 +34,15 @@ export interface HolidayRule {
 }
 
 // Court order holidays with year parity
+// Court Order Section 16 specifies only: Halloween, Thanksgiving Break, Winter Break, Spring Break
+// Thanksgiving, Spring, and Winter breaks are handled in separate functions
 const HOLIDAYS: HolidayRule[] = [
-  // Mother's holidays (even years)
+  // Halloween - Court Order Section 16a
   {
-    name: "New Year's Day",
-    yearParity: 'even',
+    name: "Halloween",
+    yearParity: 'odd',
     parent: 'mother',
-    dateRule: '01-01',
-    priority: 100,
-  },
-  {
-    name: "Martin Luther King Jr. Day",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 0, 1, 3), // 3rd Monday of January
-    priority: 100,
-  },
-  {
-    name: "Presidents' Day",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 1, 1, 3), // 3rd Monday of February
-    priority: 100,
-  },
-  {
-    name: "Spring Break",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: '03-15', // Placeholder - needs school district calendar
-    priority: 100,
-  },
-  {
-    name: "Memorial Day",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: (year: number) => getLastWeekdayOfMonth(year, 4, 1), // Last Monday of May
-    priority: 100,
-  },
-  {
-    name: "Independence Day",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: '07-04',
-    priority: 100,
-  },
-  {
-    name: "Labor Day",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 8, 1, 1), // 1st Monday of September
+    dateRule: '10-31',
     priority: 100,
   },
   {
@@ -92,82 +52,12 @@ const HOLIDAYS: HolidayRule[] = [
     dateRule: '10-31',
     priority: 100,
   },
-  {
-    name: "Thanksgiving",
-    yearParity: 'even',
-    parent: 'mother',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 10, 4, 4), // 4th Thursday of November
-    priority: 100,
-  },
-  // Winter Break is handled separately in generateWinterBreak() method
 
-  // Father's holidays (odd years)
-  {
-    name: "New Year's Day",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: '01-01',
-    priority: 100,
-  },
-  {
-    name: "Martin Luther King Jr. Day",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 0, 1, 3),
-    priority: 100,
-  },
-  {
-    name: "Presidents' Day",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 1, 1, 3),
-    priority: 100,
-  },
-  {
-    name: "Spring Break",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: '03-15',
-    priority: 100,
-  },
-  {
-    name: "Memorial Day",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: (year: number) => getLastWeekdayOfMonth(year, 4, 1),
-    priority: 100,
-  },
-  {
-    name: "Independence Day",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: '07-04',
-    priority: 100,
-  },
-  {
-    name: "Labor Day",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 8, 1, 1),
-    priority: 100,
-  },
-  {
-    name: "Halloween",
-    yearParity: 'odd',
-    parent: 'mother',
-    dateRule: '10-31',
-    priority: 100,
-  },
-  {
-    name: "Thanksgiving",
-    yearParity: 'odd',
-    parent: 'father',
-    dateRule: (year: number) => getNthWeekdayOfMonth(year, 10, 4, 4),
-    priority: 100,
-  },
-  // Winter Break is handled separately in generateWinterBreak() method
+  // Thanksgiving Break - handled separately in generateThanksgivingBreak() (Section 16b)
+  // Spring Break - handled separately in generateSpringBreak() (Section 16e)
+  // Winter Break - handled separately in generateWinterBreak() (Section 16c, 16d)
 
-  // Special events (every year)
+  // Special events (every year) - Sections 17-18
   {
     name: "Mother's Day",
     yearParity: 'all',
@@ -241,6 +131,8 @@ export class CustodyCalendarEngine {
     events.push(...this.generateWeekendSchedule(startDate, endDate));
     events.push(...this.generateSummerSchedule(startDate, endDate));
     events.push(...this.generateHolidays(startDate, endDate));
+    events.push(...this.generateThanksgivingBreak(startDate, endDate));
+    events.push(...this.generateSpringBreak(startDate, endDate));
     events.push(...this.generateWinterBreak(startDate, endDate));
     events.push(...this.generateSpecialEvents(startDate, endDate));
 
@@ -460,11 +352,6 @@ export class CustodyCalendarEngine {
               eventStart = new Date(year, 11, 26, 12, 0, 0, 0); // From 12/26 noon
               eventEnd = new Date(year + 1, 0, 2, 8, 0, 0, 0); // Until Jan 2 8am (approximate)
             }
-          } else if (holiday.name === 'Spring Break') {
-            // Spring break is full week
-            eventStart.setHours(0, 0, 0, 0);
-            eventEnd = addDays(eventStart, 7);
-            eventEnd.setHours(8, 0, 0, 0);
           } else if (
             holiday.name === "Mother's Day" ||
             holiday.name === "Father's Day"
@@ -511,6 +398,163 @@ export class CustodyCalendarEngine {
           });
         }
       }
+    }
+
+    return events;
+  }
+
+  /**
+   * Generate Thanksgiving Break custody schedule
+   * Court Order Section 16b: "Thanksgiving break: To be shared equally, with mid-break
+   * exchange at Noon on Wednesday (the day before Thanksgiving)."
+   * - In odd years: Father gets first half, Mother gets second half
+   * - In even years: Mother gets first half, Father gets second half
+   */
+  private generateThanksgivingBreak(
+    startDate: Date,
+    endDate: Date
+  ): CustodyEvent[] {
+    const events: CustodyEvent[] = [];
+    const startYear = getYear(startDate);
+    const endYear = getYear(endDate);
+
+    for (let year = startYear; year <= endYear; year++) {
+      const isEvenYear = year % 2 === 0;
+
+      // Thanksgiving is 4th Thursday of November
+      const thanksgiving = getNthWeekdayOfMonth(year, 10, 4, 4);
+
+      // Wednesday before Thanksgiving
+      const wednesdayBefore = addDays(thanksgiving, -1);
+
+      // Thanksgiving break runs from Friday before Thanksgiving week through Sunday after
+      const fridayBefore = addDays(thanksgiving, -6); // Previous Friday
+      const sundayAfter = addDays(thanksgiving, 3); // Sunday after Thanksgiving
+
+      const breakStart = new Date(fridayBefore);
+      breakStart.setHours(18, 0, 0, 0); // 6:00 PM Friday
+
+      const midBreak = new Date(wednesdayBefore);
+      midBreak.setHours(12, 0, 0, 0); // Noon Wednesday
+
+      const breakEnd = new Date(sundayAfter);
+      breakEnd.setHours(18, 0, 0, 0); // 6:00 PM Sunday
+
+      // Check if within requested date range
+      if (breakEnd < startDate || breakStart > endDate) {
+        continue;
+      }
+
+      // Determine parent assignments based on year parity
+      // Even years: Mother first half, Father second half
+      // Odd years: Father first half, Mother second half
+      const firstHalfParent = isEvenYear ? 'mother' : 'father';
+      const secondHalfParent = isEvenYear ? 'father' : 'mother';
+
+      // First half: Friday 6 PM → Wednesday noon
+      events.push({
+        id: `thanksgiving-${year}-first`,
+        startDate: breakStart,
+        endDate: midBreak,
+        custodyType: 'holiday',
+        parent: firstHalfParent,
+        title: `Thanksgiving Break ${year} - First Half`,
+        description: `Court Order Section 16b: ${isEvenYear ? 'Even' : 'Odd'} year - ${firstHalfParent === 'mother' ? 'Mother' : 'Father'} gets first half (Friday 6 PM → Wednesday noon)`,
+        priority: 100,
+      });
+
+      // Second half: Wednesday noon → Sunday 6 PM
+      events.push({
+        id: `thanksgiving-${year}-second`,
+        startDate: midBreak,
+        endDate: breakEnd,
+        custodyType: 'holiday',
+        parent: secondHalfParent,
+        title: `Thanksgiving Break ${year} - Second Half`,
+        description: `Court Order Section 16b: ${isEvenYear ? 'Even' : 'Odd'} year - ${secondHalfParent === 'mother' ? 'Mother' : 'Father'} gets second half (Wednesday noon → Sunday 6 PM)`,
+        priority: 100,
+      });
+    }
+
+    return events;
+  }
+
+  /**
+   * Generate Spring Break custody schedule
+   * Court Order Section 16e: "Spring break is defined as beginning at school pickup on the last day
+   * school is in session before the break begins, and ending at school drop off on the day that school resumes.
+   * The parties shall share the break equally with the mid-break exchange at halfway point of break."
+   * - In odd years: Father gets first half, Mother gets second half
+   * - In even years: Mother gets first half, Father gets second half
+   */
+  private generateSpringBreak(
+    startDate: Date,
+    endDate: Date
+  ): CustodyEvent[] {
+    const events: CustodyEvent[] = [];
+    const startYear = getYear(startDate);
+    const endYear = getYear(endDate);
+
+    for (let year = startYear; year <= endYear; year++) {
+      const isEvenYear = year % 2 === 0;
+
+      // TODO: Get actual spring break dates from school calendar
+      // Using approximate date: Monday March 15 as mid-point of typical spring break week
+      // Typical spring break: Friday before through Sunday after (9 days)
+      const approximateMidpoint = new Date(year, 2, 15); // March 15
+
+      // Find the Monday closest to March 15 (this will be mid-break)
+      const dayOfWeek = getDay(approximateMidpoint);
+      const daysToMonday = dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+      const midBreakMonday = addDays(approximateMidpoint, daysToMonday);
+
+      // Spring break: Friday before through Sunday after (9 days total)
+      const fridayBefore = addDays(midBreakMonday, -3); // Previous Friday
+      const sundayAfter = addDays(midBreakMonday, 6); // Sunday after (includes Sat-Sun)
+
+      const breakStart = new Date(fridayBefore);
+      breakStart.setHours(15, 0, 0, 0); // 3:00 PM Friday (school pickup - approximate)
+
+      const midBreak = new Date(midBreakMonday);
+      midBreak.setHours(12, 0, 0, 0); // Noon Monday (mid-break)
+
+      const breakEnd = new Date(sundayAfter);
+      breakEnd.setHours(20, 0, 0, 0); // 8:00 PM Sunday
+
+      // Check if within requested date range
+      if (breakEnd < startDate || breakStart > endDate) {
+        continue;
+      }
+
+      // Determine parent assignments based on year parity
+      // Even years: Mother first half, Father second half
+      // Odd years: Father first half, Mother second half
+      const firstHalfParent = isEvenYear ? 'mother' : 'father';
+      const secondHalfParent = isEvenYear ? 'father' : 'mother';
+
+      // First half: Friday 3 PM → Monday noon
+      events.push({
+        id: `spring-break-${year}-first`,
+        startDate: breakStart,
+        endDate: midBreak,
+        custodyType: 'holiday',
+        parent: firstHalfParent,
+        title: `Spring Break ${year} - First Half`,
+        description: `Court Order Section 16e: ${isEvenYear ? 'Even' : 'Odd'} year - ${firstHalfParent === 'mother' ? 'Mother' : 'Father'} gets first half (approx dates - needs school calendar)`,
+        priority: 100,
+      });
+
+      // Second half: Monday noon → Sunday 8 PM
+      events.push({
+        id: `spring-break-${year}-second`,
+        startDate: midBreak,
+        endDate: breakEnd,
+        custodyType: 'holiday',
+        parent: secondHalfParent,
+        title: `Spring Break ${year} - Second Half`,
+        description: `Court Order Section 16e: ${isEvenYear ? 'Even' : 'Odd'} year - ${secondHalfParent === 'mother' ? 'Mother' : 'Father'} gets second half (approx dates - needs school calendar)`,
+        priority: 100,
+      });
     }
 
     return events;
