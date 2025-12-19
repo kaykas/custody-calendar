@@ -544,7 +544,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 1',
-          description: `Pickup at ${thornhillSchedule.schoolName} after dismissal (Basil: ${dec18Schedule.dismissalTime.secondGrade}, Alfie: ${dec18Schedule.dismissalTime.kindergarten}) on Dec 18 → Exchange at 11:00 AM on Dec 22`,
+          description: `Pickup at ${thornhillSchedule.schoolName} after dismissal (Basil: ${dec18Schedule.dismissalTime.secondGrade}, Alfie: ${dec18Schedule.dismissalTime.kindergarten}) on Dec 18 → Exchange at Mother's home, curbside at 11:00 AM on Dec 22`,
           priority: 200,
         });
 
@@ -556,7 +556,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 2',
-          description: 'Exchange at 11:00 AM on Dec 22 → Exchange at 11:00 AM on Dec 25 (Christmas Day)',
+          description: 'Exchange at Mother\'s home, curbside at 11:00 AM on Dec 22 → Exchange at Father\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day)',
           priority: 200,
         });
 
@@ -568,7 +568,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 3',
-          description: 'Exchange at 11:00 AM on Dec 25 (Christmas Day) → Exchange at 11:00 AM on Dec 29',
+          description: 'Exchange at Father\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day) → Exchange at Mother\'s home, curbside at 11:00 AM on Dec 29',
           priority: 200,
         });
 
@@ -580,7 +580,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 4',
-          description: 'Exchange at 11:00 AM on Dec 29 → Exchange at 11:00 AM on Jan 2 (includes Scott\'s birthday Dec 31)',
+          description: 'Exchange at Mother\'s home, curbside at 11:00 AM on Dec 29 → Exchange at Father\'s home, curbside at 11:00 AM on Jan 2 (includes Scott\'s birthday Dec 31)',
           priority: 200,
         });
 

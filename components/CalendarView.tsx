@@ -25,6 +25,8 @@ export default function CalendarView({ events }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [hideFatherTime, setHideFatherTime] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -90,6 +92,40 @@ export default function CalendarView({ events }: CalendarViewProps) {
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const handleToday = () => setCurrentMonth(new Date());
 
+  const handleGoogleCalendarSync = async () => {
+    setIsSyncing(true);
+    setSyncMessage(null);
+
+    try {
+      // Check if authenticated
+      const statusResponse = await fetch('/api/sync/status');
+      const statusData = await statusResponse.json();
+
+      if (!statusData.authenticated) {
+        // Redirect to Google OAuth
+        window.location.href = '/api/auth/google';
+        return;
+      }
+
+      // Perform sync
+      const syncResponse = await fetch('/api/sync/google', { method: 'POST' });
+      const syncData = await syncResponse.json();
+
+      if (syncData.success) {
+        setSyncMessage(`✓ Synced ${syncData.details.totalEvents} events to Google Calendar`);
+        setTimeout(() => setSyncMessage(null), 5000);
+      } else {
+        setSyncMessage('✗ Sync failed. Please try again.');
+        setTimeout(() => setSyncMessage(null), 5000);
+      }
+    } catch (error) {
+      setSyncMessage('✗ Sync error. Please try again.');
+      setTimeout(() => setSyncMessage(null), 5000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const selectedDayEvents = selectedDate ? getEventsForDay(selectedDate) : [];
 
   return (
@@ -103,6 +139,25 @@ export default function CalendarView({ events }: CalendarViewProps) {
           <p className="text-sm text-gray-600 mt-1">Your time with the children</p>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={handleGoogleCalendarSync}
+            disabled={isSyncing}
+            className="px-4 py-2 rounded-lg smooth-transition font-medium flex items-center gap-2"
+            style={{
+              background: isSyncing ? 'var(--mother-light)' : 'var(--mother-accent)',
+              color: 'white',
+              border: '2px solid var(--mother-primary)',
+              boxShadow: '0 2px 8px var(--shadow-soft)',
+              cursor: isSyncing ? 'not-allowed' : 'pointer',
+              opacity: isSyncing ? 0.6 : 1
+            }}
+            aria-label="Sync with Google Calendar"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
+            </svg>
+            {isSyncing ? 'Syncing...' : 'Sync to Google Calendar'}
+          </button>
           <button
             onClick={handlePrevMonth}
             className="px-4 py-2 rounded-lg smooth-transition"
@@ -145,6 +200,18 @@ export default function CalendarView({ events }: CalendarViewProps) {
         <h2 className="text-2xl font-semibold" style={{ color: 'var(--mother-primary)' }}>
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
+        {syncMessage && (
+          <div
+            className="mt-2 p-2 rounded-lg text-sm font-medium"
+            style={{
+              background: syncMessage.startsWith('✓') ? '#d4edda' : '#f8d7da',
+              color: syncMessage.startsWith('✓') ? '#155724' : '#721c24',
+              border: `1px solid ${syncMessage.startsWith('✓') ? '#c3e6cb' : '#f5c6cb'}`
+            }}
+          >
+            {syncMessage}
+          </div>
+        )}
       </div>
 
       {/* Controls and Legend */}
@@ -417,8 +484,8 @@ export default function CalendarView({ events }: CalendarViewProps) {
                         <div className="flex items-start gap-2">
                           <span className="font-semibold min-w-[60px]">Time:</span>
                           <span>
-                            {format(new Date(event.startDate), 'h:mm a')} -{' '}
-                            {format(new Date(event.endDate), 'h:mm a')}
+                            {format(new Date(event.startDate), 'MMM d, h:mm a')} -{' '}
+                            {format(new Date(event.endDate), 'MMM d, h:mm a')}
                           </span>
                         </div>
                         {event.description && (
@@ -428,14 +495,7 @@ export default function CalendarView({ events }: CalendarViewProps) {
                             </p>
                           </div>
                         )}
-                        {/* Transition indicators for pickups/dropoffs */}
-                        {(event.custodyType === 'weekend' || event.custodyType === 'holiday') && (
-                          <div className="transition-indicator mt-3">
-                            <p className="text-xs">
-                              <strong>Pickup:</strong> {format(new Date(event.startDate), 'EEEE, h:mm a')}
-                            </p>
-                          </div>
-                        )}
+                        {/* Remove generic pickup indicator - details now in description */}
                       </div>
                     ) : (
                       // Minimal information for father's custody
