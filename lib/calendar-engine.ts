@@ -519,17 +519,13 @@ export class CustodyCalendarEngine {
     const startYear = getYear(startDate);
     const endYear = getYear(endDate);
 
-    for (let year = startYear; year <= endYear; year++) {
-      // Check if winter break dates fall within requested range
-      const winterBreakStart = new Date(year, 11, 18); // Dec 18
-      const winterBreakEnd = new Date(year + 1, 0, 5); // Jan 5 of next year
+    // Special handling for 2025-2026 winter break (Dec 18, 2025 - Jan 6, 2026)
+    const winterBreak2025Start = new Date(2025, 11, 18);
+    const winterBreak2025End = new Date(2026, 0, 6);
+    const overlaps2025WinterBreak = !(winterBreak2025End < startDate || winterBreak2025Start > endDate);
 
-      // Skip if no overlap
-      if (winterBreakEnd < startDate || winterBreakStart > endDate) {
-        continue;
-      }
-
-      if (year === 2025) {
+    if (overlaps2025WinterBreak) {
+      // Generate the specific 2025-2026 5-period winter break schedule
         // 2025-2026 Winter Break: Specific court order schedule
         // Priority 200: Higher than birthdays (150) and other holidays (100)
         // to ensure the court-ordered schedule is followed exactly
@@ -597,51 +593,65 @@ export class CustodyCalendarEngine {
           description: `Exchange at Mother's home, curbside at 11:00 AM on Jan 2 → Dropoff at ${thornhillSchedule.schoolName} for school start (Basil: ${jan6Schedule.dropoffTime.secondGrade}, Alfie: ${jan6Schedule.dropoffTime.kindergarten}) on Jan 6 (first day back - Jan 5 is PD day)`,
           priority: 200,
         });
-      } else {
-        // 2026+ Winter Break: Dynamic calculation
-        // TODO: Implement school calendar integration to get actual last day of school and first day back
-        // For now, using reasonable approximations based on typical school calendars
+    }
 
-        // Assume winter break is approximately Dec 20 through Jan 3
-        // Last day of school before break (approximate)
-        const lastDayOfSchool = new Date(year, 11, 20, 15, 0, 0); // Dec 20, 3pm
-        // First day back at school (approximate)
-        const firstDayBack = new Date(year + 1, 0, 3, 8, 0, 0); // Jan 3, 8am
+    // Generic winter break for other years (2026+, excluding 2025-2026 already handled)
+    for (let year = startYear; year <= endYear; year++) {
+      // Skip 2025 since we handle 2025-2026 specifically above
+      if (year === 2025) continue;
 
-        // Calculate midpoint for exchange
-        const breakStart = lastDayOfSchool.getTime();
-        const breakEnd = firstDayBack.getTime();
-        const midpoint = new Date((breakStart + breakEnd) / 2);
+      // Check if winter break dates fall within requested range
+      const winterBreakStart = new Date(year, 11, 18); // Dec 18
+      const winterBreakEnd = new Date(year + 1, 0, 5); // Jan 5 of next year
 
-        const isEvenYear = year % 2 === 0;
-
-        // Even years: Mother gets first half, Father gets second half
-        // Odd years: Father gets first half, Mother gets second half
-        const firstHalfParent = isEvenYear ? 'mother' : 'father';
-        const secondHalfParent = isEvenYear ? 'father' : 'mother';
-
-        events.push({
-          id: `winter-break-${year}-first`,
-          startDate: lastDayOfSchool,
-          endDate: midpoint,
-          custodyType: 'holiday',
-          parent: firstHalfParent,
-          title: `Winter Break ${year} - First Half`,
-          description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${firstHalfParent} gets first half`,
-          priority: 100,
-        });
-
-        events.push({
-          id: `winter-break-${year}-second`,
-          startDate: midpoint,
-          endDate: firstDayBack,
-          custodyType: 'holiday',
-          parent: secondHalfParent,
-          title: `Winter Break ${year} - Second Half`,
-          description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${secondHalfParent} gets second half`,
-          priority: 100,
-        });
+      // Skip if no overlap
+      if (winterBreakEnd < startDate || winterBreakStart > endDate) {
+        continue;
       }
+
+      // 2026+ Winter Break: Dynamic calculation
+      // TODO: Implement school calendar integration to get actual last day of school and first day back
+      // For now, using reasonable approximations based on typical school calendars
+
+      // Assume winter break is approximately Dec 20 through Jan 3
+      // Last day of school before break (approximate)
+      const lastDayOfSchool = new Date(year, 11, 20, 15, 0, 0); // Dec 20, 3pm
+      // First day back at school (approximate)
+      const firstDayBack = new Date(year + 1, 0, 3, 8, 0, 0); // Jan 3, 8am
+
+      // Calculate midpoint for exchange
+      const breakStart = lastDayOfSchool.getTime();
+      const breakEnd = firstDayBack.getTime();
+      const midpoint = new Date((breakStart + breakEnd) / 2);
+
+      const isEvenYear = year % 2 === 0;
+
+      // Even years: Mother gets first half, Father gets second half
+      // Odd years: Father gets first half, Mother gets second half
+      const firstHalfParent = isEvenYear ? 'mother' : 'father';
+      const secondHalfParent = isEvenYear ? 'father' : 'mother';
+
+      events.push({
+        id: `winter-break-${year}-first`,
+        startDate: lastDayOfSchool,
+        endDate: midpoint,
+        custodyType: 'holiday',
+        parent: firstHalfParent,
+        title: `Winter Break ${year} - First Half`,
+        description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${firstHalfParent} gets first half`,
+        priority: 100,
+      });
+
+      events.push({
+        id: `winter-break-${year}-second`,
+        startDate: midpoint,
+        endDate: firstDayBack,
+        custodyType: 'holiday',
+        parent: secondHalfParent,
+        title: `Winter Break ${year} - Second Half`,
+        description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${secondHalfParent} gets second half`,
+        priority: 100,
+      });
     }
 
     return events;
