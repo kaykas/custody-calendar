@@ -539,12 +539,12 @@ export class CustodyCalendarEngine {
         const dec18Schedule = thornhillSchedule.getScheduleForDate(dec18);
         events.push({
           id: 'winter-break-2025-1',
-          startDate: new Date(2025, 11, 18, 15, 0, 0), // Dec 18, 3pm (school pickup)
+          startDate: new Date(2025, 11, 18, 13, 30, 0), // Dec 18, 1:30pm (minimum day dismissal)
           endDate: new Date(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 1',
-          description: `Pickup at ${thornhillSchedule.schoolName} after dismissal (Basil: ${dec18Schedule.dismissalTime.secondGrade}, Alfie: ${dec18Schedule.dismissalTime.kindergarten}) on Dec 18 → Exchange at Mother's home, curbside at 11:00 AM on Dec 22`,
+          description: `Pickup at ${thornhillSchedule.schoolName} after dismissal (Basil: ${dec18Schedule.dismissalTime.secondGrade}, Alfie: ${dec18Schedule.dismissalTime.kindergarten}) on Dec 18 - Minimum Day → Exchange at Father's home, curbside at 11:00 AM on Dec 22`,
           priority: 200,
         });
 
@@ -556,7 +556,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 2',
-          description: 'Exchange at Mother\'s home, curbside at 11:00 AM on Dec 22 → Exchange at Father\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day)',
+          description: 'Exchange at Father\'s home, curbside at 11:00 AM on Dec 22 → Exchange at Mother\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day)',
           priority: 200,
         });
 
@@ -568,7 +568,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 3',
-          description: 'Exchange at Father\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day) → Exchange at Mother\'s home, curbside at 11:00 AM on Dec 29',
+          description: 'Exchange at Mother\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day) → Exchange at Father\'s home, curbside at 11:00 AM on Dec 29',
           priority: 200,
         });
 
@@ -580,7 +580,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 4',
-          description: 'Exchange at Mother\'s home, curbside at 11:00 AM on Dec 29 → Exchange at Father\'s home, curbside at 11:00 AM on Jan 2 (includes Scott\'s birthday Dec 31)',
+          description: 'Exchange at Father\'s home, curbside at 11:00 AM on Dec 29 → Exchange at Mother\'s home, curbside at 11:00 AM on Jan 2 (includes Scott\'s birthday Dec 31)',
           priority: 200,
         });
 
@@ -594,7 +594,7 @@ export class CustodyCalendarEngine {
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 5',
-          description: `Exchange at 11:00 AM on Jan 2 → Dropoff at ${thornhillSchedule.schoolName} for school start (Basil: ${jan6Schedule.dropoffTime.secondGrade}, Alfie: ${jan6Schedule.dropoffTime.kindergarten}) on Jan 6 (first day back - Jan 5 is PD day)`,
+          description: `Exchange at Mother's home, curbside at 11:00 AM on Jan 2 → Dropoff at ${thornhillSchedule.schoolName} for school start (Basil: ${jan6Schedule.dropoffTime.secondGrade}, Alfie: ${jan6Schedule.dropoffTime.kindergarten}) on Jan 6 (first day back - Jan 5 is PD day)`,
           priority: 200,
         });
       } else {
