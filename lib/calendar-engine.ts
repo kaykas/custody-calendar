@@ -12,7 +12,17 @@ import {
   startOfWeek,
   getDay,
 } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
 import { getPickupDropoffDescription, thornhillSchedule } from './school-schedule';
+
+// Helper function to create dates in Pacific timezone
+// This ensures custody times are created in the user's local timezone (America/Los_Angeles)
+// regardless of where the server is running (which may be UTC on Vercel)
+function createPacificDate(year: number, month: number, date: number, hours = 0, minutes = 0, seconds = 0): Date {
+  // Create a date in Pacific timezone and convert to UTC for storage
+  // fromZonedTime interprets the date as being in the specified timezone and returns UTC
+  return fromZonedTime(new Date(year, month, date, hours, minutes, seconds), 'America/Los_Angeles');
+}
 
 export interface CustodyEvent {
   id: string;
@@ -175,10 +185,19 @@ export class CustodyCalendarEngine {
         const dayName = dayNames[dayOfWeek];
         const nextDayName = dayNames[dayOfWeek + 1];
 
-        const nightStart = new Date(currentDate);
-        nightStart.setHours(18, 0, 0, 0); // 6:00 PM
-        const morningEnd = addDays(currentDate, 1);
-        morningEnd.setHours(8, 0, 0, 0); // 8:00 AM next day
+        const nightStart = createPacificDate(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          currentDate.getDate(),
+          18, 0, 0 // 6:00 PM
+        );
+        const nextDay = addDays(currentDate, 1);
+        const morningEnd = createPacificDate(
+          nextDay.getFullYear(),
+          nextDay.getMonth(),
+          nextDay.getDate(),
+          8, 0, 0 // 8:00 AM next day
+        );
 
         // Generate school-aware description
         const currentDaySchedule = thornhillSchedule.getScheduleForDate(currentDate);
@@ -208,11 +227,19 @@ export class CustodyCalendarEngine {
       // Court Order Section 12a explicitly states Mother gets every Thursday night
       if (dayOfWeek === 4) {
         // Thursday
-        const thursdayStart = new Date(currentDate);
-        thursdayStart.setHours(18, 0, 0, 0);
-        const fridayEnd = new Date(currentDate);
-        fridayEnd.setDate(fridayEnd.getDate() + 1);
-        fridayEnd.setHours(8, 0, 0, 0);
+        const thursdayStart = createPacificDate(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          currentDate.getDate(),
+          18, 0, 0 // 6:00 PM
+        );
+        const friday = addDays(currentDate, 1);
+        const fridayEnd = createPacificDate(
+          friday.getFullYear(),
+          friday.getMonth(),
+          friday.getDate(),
+          8, 0, 0 // 8:00 AM Friday
+        );
 
         // Generate school-aware description
         const thursdaySchedule = thornhillSchedule.getScheduleForDate(currentDate);
@@ -274,8 +301,12 @@ export class CustodyCalendarEngine {
     let isFatherWeekend = weeksSinceReference % 2 === 0;
 
     while (currentWeekend <= endDate) {
-      const fridayStart = new Date(currentWeekend);
-      fridayStart.setHours(18, 0, 0, 0); // 6pm Friday
+      const fridayStart = createPacificDate(
+        currentWeekend.getFullYear(),
+        currentWeekend.getMonth(),
+        currentWeekend.getDate(),
+        18, 0, 0 // 6pm Friday
+      );
 
       // Check if Monday is a school holiday (Court Order Section 12d)
       const mondayAfter = addDays(currentWeekend, 3); // Monday after weekend
@@ -289,8 +320,12 @@ export class CustodyCalendarEngine {
       if (isMondayHoliday) {
         // Court Order Section 12d: Extend to Tuesday morning if Monday is a holiday
         const tuesdayMorning = addDays(mondayAfter, 1);
-        tuesdayMorning.setHours(8, 0, 0, 0);
-        weekendEnd = tuesdayMorning;
+        weekendEnd = createPacificDate(
+          tuesdayMorning.getFullYear(),
+          tuesdayMorning.getMonth(),
+          tuesdayMorning.getDate(),
+          8, 0, 0 // 8:00 AM Tuesday
+        );
 
         const tuesdaySchedule = thornhillSchedule.getScheduleForDate(tuesdayMorning);
         dropoffDesc = tuesdaySchedule.isSchoolDay
@@ -299,8 +334,12 @@ export class CustodyCalendarEngine {
       } else {
         // Standard weekend: Sunday 6 PM
         const sundayEnd = addDays(currentWeekend, 2);
-        sundayEnd.setHours(18, 0, 0, 0);
-        weekendEnd = sundayEnd;
+        weekendEnd = createPacificDate(
+          sundayEnd.getFullYear(),
+          sundayEnd.getMonth(),
+          sundayEnd.getDate(),
+          18, 0, 0 // 6:00 PM Sunday
+        );
 
         dropoffDesc = mondaySchedule.isSchoolDay
           ? getPickupDropoffDescription(mondayAfter, false, '8:00 AM')
@@ -424,11 +463,11 @@ export class CustodyCalendarEngine {
           if (holiday.name.includes('Christmas')) {
             // Christmas break is longer
             if (holiday.name.includes('First Half')) {
-              eventStart.setHours(0, 0, 0, 0);
-              eventEnd = new Date(year, 11, 26, 12, 0, 0, 0); // Until 12/26 noon
+              eventStart = createPacificDate(year, 11, holidayDate.getDate(), 0, 0, 0);
+              eventEnd = createPacificDate(year, 11, 26, 12, 0, 0); // Until 12/26 noon
             } else {
-              eventStart = new Date(year, 11, 26, 12, 0, 0, 0); // From 12/26 noon
-              eventEnd = new Date(year + 1, 0, 2, 8, 0, 0, 0); // Until Jan 2 8am (approximate)
+              eventStart = createPacificDate(year, 11, 26, 12, 0, 0); // From 12/26 noon
+              eventEnd = createPacificDate(year + 1, 0, 2, 8, 0, 0); // Until Jan 2 8am (approximate)
             }
           } else if (
             holiday.name === "Mother's Day" ||
@@ -438,9 +477,19 @@ export class CustodyCalendarEngine {
             // "Each parent shall have custody of the children from 9am on their respective celebration day
             // until morning school/camp drop-off the following morning (or 9am return to receiving parent's
             // home, curbside, if no school/camp)."
-            eventStart.setHours(9, 0, 0, 0); // 9:00 AM on the day
-            eventEnd = addDays(eventStart, 1); // Next day
-            eventEnd.setHours(9, 0, 0, 0); // 9:00 AM next day
+            eventStart = createPacificDate(
+              holidayDate.getFullYear(),
+              holidayDate.getMonth(),
+              holidayDate.getDate(),
+              9, 0, 0 // 9:00 AM on the day
+            );
+            const nextDay = addDays(holidayDate, 1);
+            eventEnd = createPacificDate(
+              nextDay.getFullYear(),
+              nextDay.getMonth(),
+              nextDay.getDate(),
+              9, 0, 0 // 9:00 AM next day
+            );
             // TODO: Check if next day is school/camp day and adjust to 8:00 AM
           } else {
             // Standard 3-day weekend
@@ -448,20 +497,50 @@ export class CustodyCalendarEngine {
 
             if (dayOfWeek === 1) {
               // Monday holiday - back up to Friday
-              eventStart = addDays(holidayDate, -3); // Back to Friday
-              eventStart.setHours(18, 0, 0, 0); // 6pm Friday
-              eventEnd = addDays(holidayDate, 1); // Tuesday morning
-              eventEnd.setHours(8, 0, 0, 0); // 8am Tuesday
+              const friday = addDays(holidayDate, -3); // Back to Friday
+              eventStart = createPacificDate(
+                friday.getFullYear(),
+                friday.getMonth(),
+                friday.getDate(),
+                18, 0, 0 // 6pm Friday
+              );
+              const tuesday = addDays(holidayDate, 1); // Tuesday morning
+              eventEnd = createPacificDate(
+                tuesday.getFullYear(),
+                tuesday.getMonth(),
+                tuesday.getDate(),
+                8, 0, 0 // 8am Tuesday
+              );
             } else if (dayOfWeek === 4) {
               // Thursday holiday (Thanksgiving) - Thursday through Sunday
-              eventStart.setHours(0, 0, 0, 0); // Thursday morning
-              eventEnd = addDays(holidayDate, 4); // Monday morning
-              eventEnd.setHours(8, 0, 0, 0); // 8am Monday
+              eventStart = createPacificDate(
+                holidayDate.getFullYear(),
+                holidayDate.getMonth(),
+                holidayDate.getDate(),
+                0, 0, 0 // Thursday morning
+              );
+              const monday = addDays(holidayDate, 4); // Monday morning
+              eventEnd = createPacificDate(
+                monday.getFullYear(),
+                monday.getMonth(),
+                monday.getDate(),
+                8, 0, 0 // 8am Monday
+              );
             } else {
               // Other days - just the day itself plus weekend
-              eventStart.setHours(0, 0, 0, 0);
-              eventEnd = addDays(eventStart, 3);
-              eventEnd.setHours(8, 0, 0, 0);
+              eventStart = createPacificDate(
+                holidayDate.getFullYear(),
+                holidayDate.getMonth(),
+                holidayDate.getDate(),
+                0, 0, 0
+              );
+              const endDay = addDays(holidayDate, 3);
+              eventEnd = createPacificDate(
+                endDay.getFullYear(),
+                endDay.getMonth(),
+                endDay.getDate(),
+                8, 0, 0
+              );
             }
           }
 
@@ -512,14 +591,26 @@ export class CustodyCalendarEngine {
       const fridayBefore = addDays(thanksgiving, -6); // Previous Friday
       const sundayAfter = addDays(thanksgiving, 3); // Sunday after Thanksgiving
 
-      const breakStart = new Date(fridayBefore);
-      breakStart.setHours(18, 0, 0, 0); // 6:00 PM Friday
+      const breakStart = createPacificDate(
+        fridayBefore.getFullYear(),
+        fridayBefore.getMonth(),
+        fridayBefore.getDate(),
+        18, 0, 0 // 6:00 PM Friday
+      );
 
-      const midBreak = new Date(wednesdayBefore);
-      midBreak.setHours(12, 0, 0, 0); // Noon Wednesday
+      const midBreak = createPacificDate(
+        wednesdayBefore.getFullYear(),
+        wednesdayBefore.getMonth(),
+        wednesdayBefore.getDate(),
+        12, 0, 0 // Noon Wednesday
+      );
 
-      const breakEnd = new Date(sundayAfter);
-      breakEnd.setHours(18, 0, 0, 0); // 6:00 PM Sunday
+      const breakEnd = createPacificDate(
+        sundayAfter.getFullYear(),
+        sundayAfter.getMonth(),
+        sundayAfter.getDate(),
+        18, 0, 0 // 6:00 PM Sunday
+      );
 
       // Check if within requested date range
       if (breakEnd < startDate || breakStart > endDate) {
@@ -596,14 +687,26 @@ export class CustodyCalendarEngine {
       const fridayBefore = addDays(midBreakMonday, -3); // Previous Friday
       const sundayAfter = addDays(midBreakMonday, 6); // Sunday after (includes Sat-Sun)
 
-      const breakStart = new Date(fridayBefore);
-      breakStart.setHours(15, 0, 0, 0); // 3:00 PM Friday (school pickup - approximate)
+      const breakStart = createPacificDate(
+        fridayBefore.getFullYear(),
+        fridayBefore.getMonth(),
+        fridayBefore.getDate(),
+        15, 0, 0 // 3:00 PM Friday (school pickup - approximate)
+      );
 
-      const midBreak = new Date(midBreakMonday);
-      midBreak.setHours(12, 0, 0, 0); // Noon Monday (mid-break)
+      const midBreak = createPacificDate(
+        midBreakMonday.getFullYear(),
+        midBreakMonday.getMonth(),
+        midBreakMonday.getDate(),
+        12, 0, 0 // Noon Monday (mid-break)
+      );
 
-      const breakEnd = new Date(sundayAfter);
-      breakEnd.setHours(20, 0, 0, 0); // 8:00 PM Sunday
+      const breakEnd = createPacificDate(
+        sundayAfter.getFullYear(),
+        sundayAfter.getMonth(),
+        sundayAfter.getDate(),
+        20, 0, 0 // 8:00 PM Sunday
+      );
 
       // Check if within requested date range
       if (breakEnd < startDate || breakStart > endDate) {
@@ -686,8 +789,8 @@ export class CustodyCalendarEngine {
         const dec18Schedule = thornhillSchedule.getScheduleForDate(dec18);
         events.push({
           id: 'winter-break-2025-1',
-          startDate: new Date(2025, 11, 18, 13, 30, 0), // Dec 18, 1:30pm (minimum day dismissal)
-          endDate: new Date(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
+          startDate: createPacificDate(2025, 11, 18, 13, 30, 0), // Dec 18, 1:30pm (minimum day dismissal)
+          endDate: createPacificDate(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 1',
@@ -698,8 +801,8 @@ export class CustodyCalendarEngine {
         // Period 2: Father: Dec 22 at 11am → Dec 25 at 11am (Section 16c.ii)
         events.push({
           id: 'winter-break-2025-2',
-          startDate: new Date(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
-          endDate: new Date(2025, 11, 25, 11, 0, 0), // Dec 25, 11am
+          startDate: createPacificDate(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
+          endDate: createPacificDate(2025, 11, 25, 11, 0, 0), // Dec 25, 11am
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 2',
@@ -710,8 +813,8 @@ export class CustodyCalendarEngine {
         // Period 3: Mother: Dec 25 at 11am → Dec 29 at 11am (Section 16c.iii)
         events.push({
           id: 'winter-break-2025-3',
-          startDate: new Date(2025, 11, 25, 11, 0, 0), // Dec 25, 11am
-          endDate: new Date(2025, 11, 29, 11, 0, 0), // Dec 29, 11am
+          startDate: createPacificDate(2025, 11, 25, 11, 0, 0), // Dec 25, 11am
+          endDate: createPacificDate(2025, 11, 29, 11, 0, 0), // Dec 29, 11am
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 3',
@@ -722,8 +825,8 @@ export class CustodyCalendarEngine {
         // Period 4: Father: Dec 29 at 11am → Jan 2 at 11am (Section 16c.iv)
         events.push({
           id: 'winter-break-2025-4',
-          startDate: new Date(2025, 11, 29, 11, 0, 0), // Dec 29, 11am
-          endDate: new Date(2026, 0, 2, 11, 0, 0), // Jan 2, 11am
+          startDate: createPacificDate(2025, 11, 29, 11, 0, 0), // Dec 29, 11am
+          endDate: createPacificDate(2026, 0, 2, 11, 0, 0), // Jan 2, 11am
           custodyType: 'holiday',
           parent: 'father',
           title: 'Winter Break 2025 - Period 4',
@@ -737,8 +840,8 @@ export class CustodyCalendarEngine {
         const jan6Schedule = thornhillSchedule.getScheduleForDate(jan6);
         events.push({
           id: 'winter-break-2025-5',
-          startDate: new Date(2026, 0, 2, 11, 0, 0), // Jan 2, 11am
-          endDate: new Date(2026, 0, 6, 8, 0, 0), // Jan 6, 8am (school dropoff - first day back)
+          startDate: createPacificDate(2026, 0, 2, 11, 0, 0), // Jan 2, 11am
+          endDate: createPacificDate(2026, 0, 6, 8, 0, 0), // Jan 6, 8am (school dropoff - first day back)
           custodyType: 'holiday',
           parent: 'mother',
           title: 'Winter Break 2025 - Period 5',
@@ -771,9 +874,9 @@ export class CustodyCalendarEngine {
 
       // Assume winter break is approximately Dec 20 through Jan 3
       // Last day of school before break (approximate)
-      const lastDayOfSchool = new Date(year, 11, 20, 15, 0, 0); // Dec 20, 3pm
+      const lastDayOfSchool = createPacificDate(year, 11, 20, 15, 0, 0); // Dec 20, 3pm
       // First day back at school (approximate)
-      const firstDayBack = new Date(year + 1, 0, 3, 8, 0, 0); // Jan 3, 8am
+      const firstDayBack = createPacificDate(year + 1, 0, 3, 8, 0, 0); // Jan 3, 8am
 
       // Calculate midpoint for exchange
       const breakStart = lastDayOfSchool.getTime();
@@ -837,8 +940,8 @@ export class CustodyCalendarEngine {
       const fatherBirthday = new Date(year, 11, 31); // Dec 31 (Scott)
 
       if (motherBirthday >= startDate && motherBirthday <= endDate) {
-        const birthdayStart = new Date(year, 9, 2, 9, 0, 0); // 9:00 AM on birthday
-        const birthdayEnd = new Date(year, 9, 3, 9, 0, 0); // 9:00 AM next day
+        const birthdayStart = createPacificDate(year, 9, 2, 9, 0, 0); // 9:00 AM on birthday
+        const birthdayEnd = createPacificDate(year, 9, 3, 9, 0, 0); // 9:00 AM next day
         // TODO: Check if next day is school day and adjust to 8:00 AM (school dropoff)
 
         events.push({
@@ -854,8 +957,8 @@ export class CustodyCalendarEngine {
       }
 
       if (fatherBirthday >= startDate && fatherBirthday <= endDate) {
-        const birthdayStart = new Date(year, 11, 31, 9, 0, 0); // 9:00 AM on birthday
-        const birthdayEnd = new Date(year + 1, 0, 1, 9, 0, 0); // 9:00 AM next day (Jan 1 next year)
+        const birthdayStart = createPacificDate(year, 11, 31, 9, 0, 0); // 9:00 AM on birthday
+        const birthdayEnd = createPacificDate(year + 1, 0, 1, 9, 0, 0); // 9:00 AM next day (Jan 1 next year)
         // TODO: Check if next day is school day and adjust to 8:00 AM (school dropoff)
 
         events.push({
