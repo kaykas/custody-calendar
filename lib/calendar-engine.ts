@@ -37,7 +37,9 @@ export interface HolidayRule {
 // Court Order Section 16 specifies only: Halloween, Thanksgiving Break, Winter Break, Spring Break
 // Thanksgiving, Spring, and Winter breaks are handled in separate functions
 const HOLIDAYS: HolidayRule[] = [
-  // Halloween - Court Order Section 16a
+  // Halloween
+  // Court Order Page 4, Section 16a:
+  // "Halloween: with Mother in odd years and Father in even."
   {
     name: "Halloween",
     yearParity: 'odd',
@@ -58,6 +60,10 @@ const HOLIDAYS: HolidayRule[] = [
   // Winter Break - handled separately in generateWinterBreak() (Section 16c, 16d)
 
   // Special events (every year) - Sections 17-18
+  // Court Order Page 6, Section 18, Lines 4-6:
+  // "Each parent shall have custody of the children from 9am on their respective celebration day
+  // until morning school/camp drop-off the following morning (or 9am return to receiving parent's
+  // home, curbside, if no school/camp)."
   {
     name: "Mother's Day",
     yearParity: 'all',
@@ -142,8 +148,13 @@ export class CustodyCalendarEngine {
 
   /**
    * Generate regular school year schedule (weeknight custody)
-   * Court Order Section 12a: "With Mother every week from Thursday afternoon school pickup to Friday morning school drop-off."
-   * Court Order Section 13a implies: "Monday through Wednesday for Father, and Thursday for Mother"
+   *
+   * Court Order Page 3, Section 12a, Lines 2-3:
+   * "With Mother every week from Thursday afternoon school pickup to Friday morning school drop-off."
+   *
+   * Court Order Page 3, Section 13a, Lines 14-17:
+   * "During each parents' respective weekday evening parenting time (Monday through Wednesday
+   * for Father, and Thursday for Mother)..."
    */
   private generateRegularSchedule(
     startDate: Date,
@@ -236,8 +247,14 @@ export class CustodyCalendarEngine {
   /**
    * Generate alternating weekend schedule
    * Alternates between mother and father every other weekend
-   * Court Order Section 12d: "If a Monday is a school holiday, the custodial parent's time
-   * shall extend until Tuesday morning school drop-off."
+   *
+   * Court Order Page 3, Section 12b, Lines 4-5:
+   * "With Mother every other (alternating) weekends from Friday afternoon school pickup
+   * to Monday morning school drop-off."
+   *
+   * Court Order Page 3, Section 12d, Lines 7-8:
+   * "If a Monday is a school holiday, the custodial parent's time shall extend until
+   * Tuesday morning school drop-off."
    */
   private generateWeekendSchedule(
     startDate: Date,
@@ -338,8 +355,9 @@ export class CustodyCalendarEngine {
 
     while (weekNumber <= 8) {
       const weekEnd = addDays(weekStart, 7);
-      // Court Order Section 14c: "Mother shall always have the 1st, 3rd, 5th, and 7th weeks
-      // of summer, and Father shall always have the 2nd, 4th, 6th, and 8th weeks of summer."
+      // Court Order Page 4, Section 14c, Lines 1-2:
+      // "Mother shall always have the 1st, 3rd, 5th, and 7th weeks of summer, and Father
+      // shall always have the 2nd, 4th, 6th, and 8th weeks of summer."
       const isMotherWeek = weekNumber % 2 === 1; // Odd weeks (1,3,5,7): Mother
       const isFatherWeek = weekNumber % 2 === 0; // Even weeks (2,4,6,8): Father
 
@@ -416,9 +434,10 @@ export class CustodyCalendarEngine {
             holiday.name === "Mother's Day" ||
             holiday.name === "Father's Day"
           ) {
-            // Court Order Section 18: "Each parent shall have custody of the children from 9am on
-            // their respective celebration day until morning school/camp drop-off the following morning
-            // (or 9am return to receiving parent's home, curbside, if no school/camp)."
+            // Court Order Page 6, Section 18, Lines 4-6:
+            // "Each parent shall have custody of the children from 9am on their respective celebration day
+            // until morning school/camp drop-off the following morning (or 9am return to receiving parent's
+            // home, curbside, if no school/camp)."
             eventStart.setHours(9, 0, 0, 0); // 9:00 AM on the day
             eventEnd = addDays(eventStart, 1); // Next day
             eventEnd.setHours(9, 0, 0, 0); // 9:00 AM next day
@@ -465,10 +484,12 @@ export class CustodyCalendarEngine {
 
   /**
    * Generate Thanksgiving Break custody schedule
-   * Court Order Section 16b: "Thanksgiving break: To be shared equally, with mid-break
-   * exchange at Noon on Wednesday (the day before Thanksgiving)."
-   * - In odd years: Father gets first half, Mother gets second half
-   * - In even years: Mother gets first half, Father gets second half
+   *
+   * Court Order Page 4, Section 16b, Lines 22-27:
+   * "Thanksgiving break: To be shared equally, with mid-break exchange at Noon on Wednesday
+   * (the day before Thanksgiving).
+   *   i. In odd years, Father shall have the first half of the break and Mother shall have the second.
+   *   ii. In even years, Mother shall have the first half of the break and Father shall have the second."
    */
   private generateThanksgivingBreak(
     startDate: Date,
@@ -541,11 +562,14 @@ export class CustodyCalendarEngine {
 
   /**
    * Generate Spring Break custody schedule
-   * Court Order Section 16e: "Spring break is defined as beginning at school pickup on the last day
-   * school is in session before the break begins, and ending at school drop off on the day that school resumes.
-   * The parties shall share the break equally with the mid-break exchange at halfway point of break."
-   * - In odd years: Father gets first half, Mother gets second half
-   * - In even years: Mother gets first half, Father gets second half
+   *
+   * Court Order Page 5, Section 16e, Lines 16-25:
+   * "Spring break:
+   *   i. Spring break is defined as beginning at school pickup on the last day school is in session
+   *      before the break begins, and ending at school drop off on the day that school resumes.
+   *   ii. The parties shall share the break equally with the mid-break exchange at halfway point of break.
+   *   iii. In odd years, Father shall have the first half of the break and Mother shall have the second.
+   *   iv. In even years, Mother shall have the first half of the break and Father shall have the second."
    */
   private generateSpringBreak(
     startDate: Date,
@@ -622,8 +646,21 @@ export class CustodyCalendarEngine {
 
   /**
    * Generate Winter Break custody schedule
-   * 2025: Specific court-ordered schedule
-   * 2026+: Dynamic calculation based on school calendar with even/odd year split
+   *
+   * Court Order Page 4-5, Section 16c (2025 Specific):
+   * "i. With Mother from school pick up 12/18 until 12/22 at 11am;
+   *  ii. With Father from 12/22 at 11am until 12/25 at 11am;
+   *  iii. With Mother from 12/25 at 11am to 12/29 at 11am;
+   *  iv. With Father from 12/29 at 11am to 1/2 at 11am;
+   *  v. With Mother from 1/2 at 11am to Monday morning school drop-off on 1/5/26,
+   *     at which time the regular schedule shall resume."
+   *
+   * Court Order Page 5, Section 16d (2026 and Beyond):
+   * "i. Winter break is defined as beginning at school pickup on the last day school is in session
+   *     before the break begins and ending at school drop off on the day that school resumes.
+   *  ii. The parties shall share the break equally with the mid-break exchange at halfway point of break.
+   *  iii. In odd years, Father shall have the first half of the break and Mother shall have the second.
+   *  iv. In even years, Mother shall have the first half of the break and Father shall have the second."
    */
   private generateWinterBreak(
     startDate: Date,
@@ -640,11 +677,11 @@ export class CustodyCalendarEngine {
 
     if (overlaps2025WinterBreak) {
       // Generate the specific 2025-2026 5-period winter break schedule
-        // 2025-2026 Winter Break: Specific court order schedule
+        // 2025-2026 Winter Break: Specific court order schedule (Section 16c)
         // Priority 200: Higher than birthdays (150) and other holidays (100)
         // to ensure the court-ordered schedule is followed exactly
 
-        // Mother: Dec 18 school pickup → Dec 22 at 11am
+        // Period 1: Mother: Dec 18 school pickup → Dec 22 at 11am (Section 16c.i)
         const dec18 = new Date(2025, 11, 18);
         const dec18Schedule = thornhillSchedule.getScheduleForDate(dec18);
         events.push({
@@ -658,7 +695,7 @@ export class CustodyCalendarEngine {
           priority: 200,
         });
 
-        // Father: Dec 22 at 11am → Dec 25 at 11am
+        // Period 2: Father: Dec 22 at 11am → Dec 25 at 11am (Section 16c.ii)
         events.push({
           id: 'winter-break-2025-2',
           startDate: new Date(2025, 11, 22, 11, 0, 0), // Dec 22, 11am
@@ -670,7 +707,7 @@ export class CustodyCalendarEngine {
           priority: 200,
         });
 
-        // Mother: Dec 25 at 11am → Dec 29 at 11am
+        // Period 3: Mother: Dec 25 at 11am → Dec 29 at 11am (Section 16c.iii)
         events.push({
           id: 'winter-break-2025-3',
           startDate: new Date(2025, 11, 25, 11, 0, 0), // Dec 25, 11am
@@ -682,7 +719,7 @@ export class CustodyCalendarEngine {
           priority: 200,
         });
 
-        // Father: Dec 29 at 11am → Jan 2 at 11am
+        // Period 4: Father: Dec 29 at 11am → Jan 2 at 11am (Section 16c.iv)
         events.push({
           id: 'winter-break-2025-4',
           startDate: new Date(2025, 11, 29, 11, 0, 0), // Dec 29, 11am
@@ -694,7 +731,8 @@ export class CustodyCalendarEngine {
           priority: 200,
         });
 
-        // Mother: Jan 2 at 11am → Jan 6 school dropoff (Jan 5 is PD day)
+        // Period 5: Mother: Jan 2 at 11am → Jan 6 school dropoff (Section 16c.v)
+        // Note: Jan 5 is PD day, Jan 6 is first day back
         const jan6 = new Date(2026, 0, 6);
         const jan6Schedule = thornhillSchedule.getScheduleForDate(jan6);
         events.push({
@@ -710,8 +748,9 @@ export class CustodyCalendarEngine {
     }
 
     // Generic winter break for other years (2026+, excluding 2025-2026 already handled)
+    // Court Order Section 16d applies for 2026 and beyond
     for (let year = startYear; year <= endYear; year++) {
-      // Skip 2025 since we handle 2025-2026 specifically above
+      // Skip 2025 since we handle 2025-2026 specifically above (Section 16c)
       if (year === 2025) continue;
 
       // Check if winter break dates fall within requested range
@@ -723,7 +762,10 @@ export class CustodyCalendarEngine {
         continue;
       }
 
-      // 2026+ Winter Break: Dynamic calculation
+      // 2026+ Winter Break: Dynamic calculation per Section 16d
+      // Court Order Section 16d: Split equally at halfway point
+      // Odd years: Father first half, Mother second half
+      // Even years: Mother first half, Father second half
       // TODO: Implement school calendar integration to get actual last day of school and first day back
       // For now, using reasonable approximations based on typical school calendars
 
@@ -784,9 +826,11 @@ export class CustodyCalendarEngine {
 
     // Mother's birthday (Alexandra - October 2)
     // Father's birthday (Scott - December 31)
-    // Court Order Section 17: "Each parent shall have custody of the children from 9am on their
-    // respective birthday until morning school/camp drop-off the following morning (or 9am return
-    // to receiving parent's home, curbside, if no school/camp)."
+    //
+    // Court Order Page 6, Section 17, Lines 1-3:
+    // "Each parent shall have custody of the children from 9am on their respective birthday
+    // until morning school/camp drop-off the following morning (or 9am return to receiving
+    // parent's home, curbside, if no school/camp)."
 
     for (let year = startYear; year <= endYear; year++) {
       const motherBirthday = new Date(year, 9, 2); // Oct 2 (Alexandra)
