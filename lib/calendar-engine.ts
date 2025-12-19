@@ -250,6 +250,8 @@ export class CustodyCalendarEngine {
 
   /**
    * Generate regular school year schedule (Thursday nights)
+   * Court Order Section 12a: "With Mother every week from Thursday afternoon
+   * school pickup to Friday morning school drop-off."
    */
   private generateRegularSchedule(
     startDate: Date,
@@ -261,7 +263,8 @@ export class CustodyCalendarEngine {
     while (currentDate <= endDate) {
       const dayOfWeek = getDay(currentDate);
 
-      // Thursday overnight with father (6pm Thursday to 8am Friday)
+      // Thursday overnight with MOTHER (school pickup Thursday to school dropoff Friday)
+      // Court Order Section 12a explicitly states Mother gets every Thursday night
       if (dayOfWeek === 4) {
         // Thursday
         const thursdayStart = new Date(currentDate);
@@ -287,7 +290,7 @@ export class CustodyCalendarEngine {
           startDate: thursdayStart,
           endDate: fridayEnd,
           custodyType: 'regular',
-          parent: 'father',
+          parent: 'mother',
           title: 'Thursday Night',
           description: `${pickupDesc} → ${dropoffDesc}`,
           priority: 10,
@@ -383,7 +386,10 @@ export class CustodyCalendarEngine {
 
     while (weekNumber <= 8) {
       const weekEnd = addDays(weekStart, 7);
-      const isFatherWeek = weekNumber % 2 === 1; // Odd weeks: father
+      // Court Order Section 14c: "Mother shall always have the 1st, 3rd, 5th, and 7th weeks
+      // of summer, and Father shall always have the 2nd, 4th, 6th, and 8th weeks of summer."
+      const isMotherWeek = weekNumber % 2 === 1; // Odd weeks (1,3,5,7): Mother
+      const isFatherWeek = weekNumber % 2 === 0; // Even weeks (2,4,6,8): Father
 
       // Only include if within requested date range
       if (weekEnd >= startDate && weekStart <= endDate) {
@@ -392,11 +398,11 @@ export class CustodyCalendarEngine {
           startDate: weekStart,
           endDate: weekEnd,
           custodyType: 'summer',
-          parent: isFatherWeek ? 'father' : 'mother',
+          parent: isMotherWeek ? 'mother' : 'father',
           title: `Summer Week ${weekNumber}`,
           description: `8-week summer rotation - ${
-            isFatherWeek ? "Father's" : "Mother's"
-          } week`,
+            isMotherWeek ? "Mother's" : "Father's"
+          } week (Court Order Section 14c)`,
           priority: 50,
         });
       }
@@ -463,9 +469,13 @@ export class CustodyCalendarEngine {
             holiday.name === "Mother's Day" ||
             holiday.name === "Father's Day"
           ) {
-            // Special days are just that day
-            eventStart.setHours(0, 0, 0, 0);
-            eventEnd.setHours(23, 59, 59, 999);
+            // Court Order Section 18: "Each parent shall have custody of the children from 9am on
+            // their respective celebration day until morning school/camp drop-off the following morning
+            // (or 9am return to receiving parent's home, curbside, if no school/camp)."
+            eventStart.setHours(9, 0, 0, 0); // 9:00 AM on the day
+            eventEnd = addDays(eventStart, 1); // Next day
+            eventEnd.setHours(9, 0, 0, 0); // 9:00 AM next day
+            // TODO: Check if next day is school/camp day and adjust to 8:00 AM
           } else {
             // Standard 3-day weekend
             const dayOfWeek = getDay(holidayDate);
@@ -670,34 +680,44 @@ export class CustodyCalendarEngine {
 
     // Mother's birthday (Alexandra - October 2)
     // Father's birthday (Scott - December 31)
-    // Children's birthdays would go here
+    // Court Order Section 17: "Each parent shall have custody of the children from 9am on their
+    // respective birthday until morning school/camp drop-off the following morning (or 9am return
+    // to receiving parent's home, curbside, if no school/camp)."
 
     for (let year = startYear; year <= endYear; year++) {
       const motherBirthday = new Date(year, 9, 2); // Oct 2 (Alexandra)
       const fatherBirthday = new Date(year, 11, 31); // Dec 31 (Scott)
 
       if (motherBirthday >= startDate && motherBirthday <= endDate) {
+        const birthdayStart = new Date(year, 9, 2, 9, 0, 0); // 9:00 AM on birthday
+        const birthdayEnd = new Date(year, 9, 3, 9, 0, 0); // 9:00 AM next day
+        // TODO: Check if next day is school day and adjust to 8:00 AM (school dropoff)
+
         events.push({
           id: `special-mother-bday-${year}`,
-          startDate: startOfDay(motherBirthday),
-          endDate: endOfDay(motherBirthday),
+          startDate: birthdayStart,
+          endDate: birthdayEnd,
           custodyType: 'special',
           parent: 'mother',
           title: "Mother's Birthday",
-          description: 'Special event - Mother has custody',
+          description: 'Court Order Section 17: 9:00 AM birthday → 9:00 AM next day (or school dropoff)',
           priority: 150,
         });
       }
 
       if (fatherBirthday >= startDate && fatherBirthday <= endDate) {
+        const birthdayStart = new Date(year, 11, 31, 9, 0, 0); // 9:00 AM on birthday
+        const birthdayEnd = new Date(year + 1, 0, 1, 9, 0, 0); // 9:00 AM next day (Jan 1 next year)
+        // TODO: Check if next day is school day and adjust to 8:00 AM (school dropoff)
+
         events.push({
           id: `special-father-bday-${year}`,
-          startDate: startOfDay(fatherBirthday),
-          endDate: endOfDay(fatherBirthday),
+          startDate: birthdayStart,
+          endDate: birthdayEnd,
           custodyType: 'special',
           parent: 'father',
           title: "Father's Birthday",
-          description: 'Special event - Father has custody',
+          description: 'Court Order Section 17: 9:00 AM birthday → 9:00 AM next day (or school dropoff)',
           priority: 150,
         });
       }
