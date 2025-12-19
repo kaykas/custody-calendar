@@ -198,7 +198,17 @@ export class CustodyCalendarEngine {
           // Use school dismissal time (varies by grade)
           // Basil (2nd grade) dismisses later, so use her time as the pickup
           const dismissalTime = thursdaySchedule.dismissalTime.secondGrade;
-          [thursdayStartHour, thursdayStartMinute] = dismissalTime.split(':').map(Number);
+          // Parse time like "02:50 PM"
+          const [time, period] = dismissalTime.split(' ');
+          const [hourStr, minuteStr] = time.split(':');
+          thursdayStartHour = parseInt(hourStr);
+          thursdayStartMinute = parseInt(minuteStr);
+          // Convert to 24-hour format
+          if (period === 'PM' && thursdayStartHour !== 12) {
+            thursdayStartHour += 12;
+          } else if (period === 'AM' && thursdayStartHour === 12) {
+            thursdayStartHour = 0;
+          }
           pickupDesc = getPickupDropoffDescription(currentDate, true, dismissalTime);
         } else {
           pickupDesc = 'Pickup at 6:00 PM (non-school day)';
@@ -453,14 +463,22 @@ export class CustodyCalendarEngine {
               holidayDate.getDate(),
               9, 0, 0 // 9:00 AM on the day
             );
+
+            // Check if next day is school day - Court Order Section 18
             const nextDay = addDays(holidayDate, 1);
+            const nextDaySchedule = thornhillSchedule.getScheduleForDate(nextDay);
+
+            let endHour = 9;
+            if (nextDaySchedule.isSchoolDay) {
+              endHour = 8; // School drop-off time
+            }
+
             eventEnd = createPacificDate(
               nextDay.getFullYear(),
               nextDay.getMonth(),
               nextDay.getDate(),
-              9, 0, 0 // 9:00 AM next day
+              endHour, 0, 0
             );
-            // TODO: Check if next day is school/camp day and adjust to 8:00 AM
           } else {
             // Standard 3-day weekend
             const dayOfWeek = getDay(holidayDate);
@@ -911,8 +929,19 @@ export class CustodyCalendarEngine {
 
       if (motherBirthday >= startDate && motherBirthday <= endDate) {
         const birthdayStart = createPacificDate(year, 9, 2, 9, 0, 0); // 9:00 AM on birthday
-        const birthdayEnd = createPacificDate(year, 9, 3, 9, 0, 0); // 9:00 AM next day
-        // TODO: Check if next day is school day and adjust to 8:00 AM (school dropoff)
+
+        // Check if next day is school day - Court Order Section 17
+        const nextDay = new Date(year, 9, 3); // Oct 3
+        const nextDaySchedule = thornhillSchedule.getScheduleForDate(nextDay);
+
+        let endHour = 9;
+        let endDesc = '9:00 AM next day (no school/camp)';
+        if (nextDaySchedule.isSchoolDay) {
+          endHour = 8;
+          endDesc = getPickupDropoffDescription(nextDay, false, '8:00 AM');
+        }
+
+        const birthdayEnd = createPacificDate(year, 9, 3, endHour, 0, 0);
 
         events.push({
           id: `special-mother-bday-${year}`,
@@ -921,15 +950,26 @@ export class CustodyCalendarEngine {
           custodyType: 'special',
           parent: 'mother',
           title: "Mother's Birthday",
-          description: 'Court Order Section 17: 9:00 AM birthday → 9:00 AM next day (or school dropoff)',
+          description: `Court Order Section 17: 9:00 AM Oct 2 → ${endDesc}`,
           priority: 150,
         });
       }
 
       if (fatherBirthday >= startDate && fatherBirthday <= endDate) {
-        const birthdayStart = createPacificDate(year, 11, 31, 9, 0, 0); // 9:00 AM on birthday
-        const birthdayEnd = createPacificDate(year + 1, 0, 1, 9, 0, 0); // 9:00 AM next day (Jan 1 next year)
-        // TODO: Check if next day is school day and adjust to 8:00 AM (school dropoff)
+        const birthdayStart = createPacificDate(year, 11, 31, 9, 0, 0); // 9:00 AM Dec 31
+
+        // Check if next day (Jan 1) is school day - Court Order Section 17
+        const nextDay = new Date(year + 1, 0, 1); // Jan 1 next year
+        const nextDaySchedule = thornhillSchedule.getScheduleForDate(nextDay);
+
+        let endHour = 9;
+        let endDesc = '9:00 AM Jan 1 (no school/camp)';
+        if (nextDaySchedule.isSchoolDay) {
+          endHour = 8;
+          endDesc = getPickupDropoffDescription(nextDay, false, '8:00 AM');
+        }
+
+        const birthdayEnd = createPacificDate(year + 1, 0, 1, endHour, 0, 0);
 
         events.push({
           id: `special-father-bday-${year}`,
@@ -938,7 +978,7 @@ export class CustodyCalendarEngine {
           custodyType: 'special',
           parent: 'father',
           title: "Father's Birthday",
-          description: 'Court Order Section 17: 9:00 AM birthday → 9:00 AM next day (or school dropoff)',
+          description: `Court Order Section 17: 9:00 AM Dec 31 → ${endDesc}`,
           priority: 150,
         });
       }
