@@ -176,52 +176,11 @@ export class CustodyCalendarEngine {
     while (currentDate <= endDate) {
       const dayOfWeek = getDay(currentDate);
 
-      // Monday, Tuesday, Wednesday overnight with FATHER
-      // Court Order Section 13a: "During each parents' respective weekday evening parenting time
-      // (Monday through Wednesday for Father, and Thursday for Mother)..."
-      if (dayOfWeek >= 1 && dayOfWeek <= 3) {
-        // Monday = 1, Tuesday = 2, Wednesday = 3
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const dayName = dayNames[dayOfWeek];
-        const nextDayName = dayNames[dayOfWeek + 1];
-
-        const nightStart = createPacificDate(
-          currentDate.getFullYear(),
-          currentDate.getMonth(),
-          currentDate.getDate(),
-          18, 0, 0 // 6:00 PM
-        );
-        const nextDay = addDays(currentDate, 1);
-        const morningEnd = createPacificDate(
-          nextDay.getFullYear(),
-          nextDay.getMonth(),
-          nextDay.getDate(),
-          8, 0, 0 // 8:00 AM next day
-        );
-
-        // Generate school-aware description
-        const currentDaySchedule = thornhillSchedule.getScheduleForDate(currentDate);
-        const nextDaySchedule = thornhillSchedule.getScheduleForDate(morningEnd);
-
-        const pickupDesc = currentDaySchedule.isSchoolDay
-          ? getPickupDropoffDescription(currentDate, true, '6:00 PM')
-          : 'Pickup at 6:00 PM (non-school day)';
-
-        const dropoffDesc = nextDaySchedule.isSchoolDay
-          ? getPickupDropoffDescription(morningEnd, false, '8:00 AM')
-          : 'Dropoff at 8:00 AM (non-school day)';
-
-        events.push({
-          id: `regular-${dayName.toLowerCase()}-${format(currentDate, 'yyyy-MM-dd')}`,
-          startDate: nightStart,
-          endDate: morningEnd,
-          custodyType: 'regular',
-          parent: 'father',
-          title: `${dayName} Night`,
-          description: `${pickupDesc} → ${dropoffDesc}`,
-          priority: 10,
-        });
-      }
+      // NOTE: Court Order Section 13a mentions "weekday evening parenting time (Monday through
+      // Wednesday for Father, and Thursday for Mother)" but this refers to EVENING time for
+      // extracurricular activities, NOT overnight custody. The court order does not specify
+      // Monday-Wednesday overnight custody for Father. Mother has primary custody except for
+      // the times explicitly specified in Sections 12 and 16.
 
       // Thursday overnight with MOTHER (school pickup Thursday to school dropoff Friday)
       // Court Order Section 12a explicitly states Mother gets every Thursday night
