@@ -24,7 +24,7 @@ interface CalendarViewProps {
 export default function CalendarView({ events }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [hideFatherTime, setHideFatherTime] = useState(false);
+  const [filterParent, setFilterParent] = useState<'all' | 'mother' | 'father'>('all');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
@@ -130,15 +130,15 @@ export default function CalendarView({ events }: CalendarViewProps) {
 
   return (
     <div className="max-w-7xl mx-auto p-4">
-      {/* Header with navigation */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header with navigation - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--mother-special)' }}>
+          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--mother-special)' }}>
             Alexandra's Custody Calendar
           </h1>
           <p className="text-sm text-gray-600 mt-1">Your time with the children</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 w-full sm:w-auto">
           <button
             onClick={handleGoogleCalendarSync}
             disabled={isSyncing}
@@ -221,30 +221,51 @@ export default function CalendarView({ events }: CalendarViewProps) {
             Calendar Legend
           </h3>
 
-          {/* Hide Father's Time Toggle */}
-          <label className="flex items-center gap-3 cursor-pointer">
-            <span className="text-sm font-medium text-gray-700">Hide Father's Time</span>
-            <div className="relative">
-              <input
-                type="checkbox"
-                checked={hideFatherTime}
-                onChange={(e) => setHideFatherTime(e.target.checked)}
-                className="sr-only"
-                aria-label="Toggle visibility of father's custody time"
-              />
-              <div
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  hideFatherTime ? 'bg-[var(--mother-primary)]' : 'bg-gray-300'
+          {/* Neutral Parent Filter - Equal Treatment */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Filter by Parent:</span>
+            <div className="flex gap-1 p-1 rounded-lg" style={{ background: '#F3F4F6' }}>
+              <button
+                onClick={() => setFilterParent('all')}
+                className={`px-3 py-1 text-sm rounded transition-all ${
+                  filterParent === 'all' ? 'font-semibold shadow-sm' : 'opacity-60'
                 }`}
+                style={{
+                  background: filterParent === 'all' ? 'white' : 'transparent',
+                  color: filterParent === 'all' ? 'var(--foreground)' : 'var(--foreground)',
+                }}
+                aria-label="Show all custody time"
               >
-                <div
-                  className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
-                    hideFatherTime ? 'translate-x-6' : 'translate-x-1'
-                  } mt-0.5`}
-                ></div>
-              </div>
+                All
+              </button>
+              <button
+                onClick={() => setFilterParent('mother')}
+                className={`px-3 py-1 text-sm rounded transition-all ${
+                  filterParent === 'mother' ? 'font-semibold shadow-sm' : 'opacity-60'
+                }`}
+                style={{
+                  background: filterParent === 'mother' ? 'var(--mother-light)' : 'transparent',
+                  color: filterParent === 'mother' ? 'var(--mother-special)' : 'var(--foreground)',
+                }}
+                aria-label="Show only mother's custody time"
+              >
+                Mother
+              </button>
+              <button
+                onClick={() => setFilterParent('father')}
+                className={`px-3 py-1 text-sm rounded transition-all ${
+                  filterParent === 'father' ? 'font-semibold shadow-sm' : 'opacity-60'
+                }`}
+                style={{
+                  background: filterParent === 'father' ? 'var(--father-light)' : 'transparent',
+                  color: filterParent === 'father' ? 'var(--father-text)' : 'var(--foreground)',
+                }}
+                aria-label="Show only father's custody time"
+              >
+                Father
+              </button>
             </div>
-          </label>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -297,17 +318,19 @@ export default function CalendarView({ events }: CalendarViewProps) {
               Your Holiday
             </span>
           </div>
-          {/* Father's time - de-emphasized */}
-          {!hideFatherTime && (
-            <div className="flex items-center gap-2 opacity-70">
+          {/* Father's time - Equal Treatment */}
+          {filterParent !== 'mother' && (
+            <div className="flex items-center gap-2">
               <div
-                className="w-7 h-7 rounded"
+                className="w-8 h-8 rounded shadow-sm"
                 style={{
                   background: 'var(--father-regular)',
-                  border: '1px solid var(--father-border)'
+                  border: '2px solid var(--father-light)'
                 }}
               ></div>
-              <span className="text-xs text-gray-500">Father's Time</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--father-text)' }}>
+                Father's Time
+              </span>
             </div>
           )}
         </div>
@@ -343,14 +366,27 @@ export default function CalendarView({ events }: CalendarViewProps) {
                 const isDayToday = isToday(day);
                 const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
 
-                // Skip rendering if hiding father's time and this is father's day
-                if (hideFatherTime && primaryParent === 'father') {
+                // Apply parent filter - skip rendering if filtered out
+                if (filterParent === 'mother' && primaryParent === 'father') {
                   return (
                     <div
                       key={day.toISOString()}
                       className="min-h-24 p-2"
-                      style={{ background: 'var(--father-light)' }}
-                      aria-label={`${format(day, 'd')} - Father's custody (hidden)`}
+                      style={{ background: 'var(--father-light)', opacity: 0.3 }}
+                      aria-label={`${format(day, 'd')} - Father's custody (filtered)`}
+                    >
+                      <div className="text-xs text-gray-400">{format(day, 'd')}</div>
+                    </div>
+                  );
+                }
+
+                if (filterParent === 'father' && primaryParent === 'mother') {
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className="min-h-24 p-2"
+                      style={{ background: 'var(--mother-light)', opacity: 0.3 }}
+                      aria-label={`${format(day, 'd')} - Mother's custody (filtered)`}
                     >
                       <div className="text-xs text-gray-400">{format(day, 'd')}</div>
                     </div>
@@ -368,9 +404,14 @@ export default function CalendarView({ events }: CalendarViewProps) {
                       ${isSelected ? 'ring-3 ring-[var(--mother-primary)] ring-inset' : ''}
                       ${isDayToday ? 'ring-3 ring-[var(--warm-accent)] ring-inset today-indicator' : ''}
                     `}
+                    style={{
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      touchAction: 'manipulation',
+                    }}
                     role="button"
                     tabIndex={0}
-                    aria-label={`${format(day, 'EEEE, MMMM d')} - ${primaryParent === 'mother' ? "Your custody" : "Father's custody"}`}
+                    aria-label={`${format(day, 'EEEE, MMMM d')} - ${primaryParent === 'mother' ? "Mother's custody" : "Father's custody"}`}
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         setSelectedDate(day);
@@ -379,15 +420,15 @@ export default function CalendarView({ events }: CalendarViewProps) {
                   >
                     <div className="flex flex-col h-full">
                       <div
-                        className={`text-sm mb-1 ${
-                          primaryParent === 'mother' ? 'font-bold text-gray-900' : 'font-normal'
-                        }`}
+                        className="text-sm mb-1 font-bold"
                         style={{
                           color: primaryParent === 'mother'
                             ? (primaryEvent?.custodyType === 'summer' ||
                                primaryEvent?.custodyType === 'holiday' ||
                                primaryEvent?.custodyType === 'special' ? 'white' : 'var(--mother-special)')
-                            : 'var(--father-text)'
+                            : (primaryEvent?.custodyType === 'summer' ||
+                               primaryEvent?.custodyType === 'holiday' ||
+                               primaryEvent?.custodyType === 'special' ? 'white' : 'var(--father-text)')
                         }}
                       >
                         {format(day, 'd')}
@@ -401,15 +442,17 @@ export default function CalendarView({ events }: CalendarViewProps) {
                                 event.parent === 'mother' ? 'mother-event-text' : 'father-event-text'
                               }`}
                               style={{
-                                fontSize: event.parent === 'mother' ? '0.8125rem' : '0.6875rem',
+                                fontSize: '0.8125rem',
                                 color: event.parent === 'mother'
                                   ? (event.custodyType === 'summer' ||
                                      event.custodyType === 'holiday' ||
                                      event.custodyType === 'special' ? 'white' : 'var(--mother-special)')
-                                  : 'var(--father-text)'
+                                  : (event.custodyType === 'summer' ||
+                                     event.custodyType === 'holiday' ||
+                                     event.custodyType === 'special' ? 'white' : 'var(--father-text)')
                               }}
                             >
-                              {event.parent === 'mother' ? event.title : 'Father\'s custody'}
+                              {event.title}
                             </div>
                           ))}
                           {dayEvents.length > 2 && (
@@ -448,66 +491,63 @@ export default function CalendarView({ events }: CalendarViewProps) {
                     key={event.id}
                     className={event.parent === 'mother' ? 'mother-event-card' : 'father-event-card'}
                     role="article"
-                    aria-label={`${event.parent === 'mother' ? 'Your' : "Father's"} custody event`}
+                    aria-label={`${event.parent === 'mother' ? "Mother's" : "Father's"} custody event`}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <span
-                        className={`font-semibold ${
-                          event.parent === 'mother' ? 'text-base' : 'text-sm'
-                        }`}
+                        className="font-semibold text-base"
                         style={{
                           color: event.parent === 'mother' ? 'var(--mother-special)' : 'var(--father-text)'
                         }}
                       >
-                        {event.parent === 'mother' ? event.title : 'Father\'s Custody'}
+                        {event.title}
                       </span>
                       <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          event.parent === 'mother' ? 'font-medium' : 'font-normal'
-                        }`}
+                        className="text-xs px-2 py-1 rounded font-medium"
                         style={{
-                          background: event.parent === 'mother' ? 'var(--mother-accent)' : 'var(--father-border)',
-                          color: event.parent === 'mother' ? 'white' : 'var(--father-text)'
+                          background: event.parent === 'mother' ? 'var(--mother-accent)' : 'var(--father-accent)',
+                          color: 'white'
                         }}
                       >
-                        {event.parent === 'mother' ? 'Your Time' : 'Father'}
+                        {event.parent === 'mother' ? 'Mother' : 'Father'}
                       </span>
                     </div>
 
-                    {/* Show detailed information only for mother's custody */}
-                    {event.parent === 'mother' ? (
-                      <div className="text-sm space-y-2" style={{ color: 'var(--mother-special)' }}>
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold min-w-[60px]">Type:</span>
-                          <span className="capitalize">{event.custodyType}</span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold min-w-[60px]">Time:</span>
-                          <span>
-                            {format(new Date(event.startDate), 'MMM d, h:mm a')} -{' '}
-                            {format(new Date(event.endDate), 'MMM d, h:mm a')}
+                    {/* Show detailed information for both parents - Equal Treatment */}
+                    <div className="text-sm space-y-2" style={{ color: event.parent === 'mother' ? 'var(--mother-special)' : 'var(--father-text)' }}>
+                      {event.courtOrderSection && (
+                        <div className="flex items-start gap-2 mb-2">
+                          <span
+                            className="text-xs px-2 py-1 rounded font-semibold"
+                            style={{
+                              background: event.parent === 'mother' ? 'var(--mother-accent)' : 'var(--father-accent)',
+                              color: 'white',
+                              border: `2px solid ${event.parent === 'mother' ? 'var(--mother-primary)' : 'var(--father-primary)'}`,
+                            }}
+                          >
+                            Court Order: {event.courtOrderSection}
                           </span>
                         </div>
-                        {event.description && (
-                          <div className="mt-3 p-3 rounded" style={{ background: 'var(--mother-lighter)' }}>
-                            <p className="text-xs font-medium" style={{ color: 'var(--mother-primary)' }}>
-                              {event.description}
-                            </p>
-                          </div>
-                        )}
-                        {/* Remove generic pickup indicator - details now in description */}
+                      )}
+                      <div className="flex items-start gap-2">
+                        <span className="font-semibold min-w-[60px]">Type:</span>
+                        <span className="capitalize">{event.custodyType}</span>
                       </div>
-                    ) : (
-                      // Minimal information for father's custody
-                      <div className="text-xs space-y-1" style={{ color: 'var(--father-text)' }}>
-                        <div>
-                          <span className="capitalize">{event.custodyType}</span> custody period
-                        </div>
-                        <div className="opacity-70">
-                          {format(new Date(event.startDate), 'h:mm a')} - {format(new Date(event.endDate), 'h:mm a')}
-                        </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-semibold min-w-[60px]">Time:</span>
+                        <span>
+                          {format(new Date(event.startDate), 'MMM d, h:mm a')} -{' '}
+                          {format(new Date(event.endDate), 'MMM d, h:mm a')}
+                        </span>
                       </div>
-                    )}
+                      {event.description && (
+                        <div className="mt-3 p-3 rounded" style={{ background: event.parent === 'mother' ? 'var(--mother-lighter)' : 'var(--father-lighter)' }}>
+                          <p className="text-xs font-medium" style={{ color: event.parent === 'mother' ? 'var(--mother-primary)' : 'var(--father-primary)' }}>
+                            {event.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

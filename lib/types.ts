@@ -10,6 +10,7 @@ export interface CalendarEvent {
   title: string;
   description?: string;
   priority: number;
+  courtOrderSection?: string; // Reference to court order section (e.g., "Section 12a", "Section 16c.i")
 }
 
 export interface DayInfo {

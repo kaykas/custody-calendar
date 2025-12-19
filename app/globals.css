@@ -17,18 +17,19 @@
   --mother-holiday: #8B6FAD;
   --mother-special: #7B5F9D;
 
-  /* Father's Time - De-emphasized (Muted, Desaturated) */
-  --father-primary: #F5F5F5;
-  --father-light: #FAFAFA;
-  --father-border: #E8EAED;
-  --father-text: #9CA3AF;
+  /* Father's Time - Equal Treatment (WCAG AA Compliant) */
+  --father-primary: #93C5FD;
+  --father-light: #BFDBFE;
+  --father-lighter: #DBEAFE;
+  --father-accent: #60A5FA;
+  --father-text: #1E40AF;
 
-  /* Custody Type Colors - Father (Subtle) */
-  --father-regular: #F9FAFB;
-  --father-weekend: #F5F5F5;
-  --father-summer: #F0F0F0;
-  --father-holiday: #EBEBEB;
-  --father-special: #E5E5E5;
+  /* Custody Type Colors - Father (Equal Treatment) */
+  --father-regular: #DBEAFE;
+  --father-weekend: #BFDBFE;
+  --father-summer: #93C5FD;
+  --father-holiday: #60A5FA;
+  --father-special: #3B82F6;
 
   /* Warm Neutrals & Accents */
   --warm-bg: #FDFCFB;
@@ -101,46 +102,46 @@ body {
   box-shadow: 0 2px 8px var(--shadow-medium);
 }
 
-/* Father's Custody - Subtle & De-emphasized */
+/* Father's Custody - Equal Treatment */
 .father-custody-day {
   background: var(--father-regular);
-  border: 1px solid var(--father-border);
+  border: 2px solid var(--father-light);
   color: var(--father-text);
-  font-weight: 400;
-  font-size: 0.875rem;
-  opacity: 0.85;
-  transition: opacity 0.2s ease;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    rgba(0, 0, 0, 0.01) 10px,
-    rgba(0, 0, 0, 0.01) 20px
-  );
+  font-weight: 500;
+  font-size: 1rem;
+  opacity: 1.0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .father-custody-day:hover {
-  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+  border-color: var(--father-primary);
 }
 
 .father-custody-weekend {
   background: var(--father-weekend);
-  border: 1px solid var(--father-border);
+  border: 2px solid var(--father-accent);
 }
 
 .father-custody-summer {
   background: var(--father-summer);
-  border: 1px solid var(--father-border);
+  border: 2px solid var(--father-primary);
+  color: white;
 }
 
 .father-custody-holiday {
   background: var(--father-holiday);
-  border: 1px solid var(--father-border);
+  border: 3px solid #3B82F6;
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
 }
 
 .father-custody-special {
   background: var(--father-special);
-  border: 1px solid var(--father-border);
+  border: 3px solid #3B82F6;
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
 }
 
 /* Soft transitions for calming effect */
@@ -169,15 +170,14 @@ body {
   font-weight: 500;
 }
 
-/* Father-focused event card - minimal */
+/* Father-focused event card - Equal Treatment */
 .father-event-card {
-  background: var(--father-light);
-  border: 1px solid var(--father-border);
-  border-radius: 6px;
-  padding: 0.75rem;
-  font-weight: 400;
-  font-size: 0.875rem;
-  opacity: 0.8;
+  background: linear-gradient(135deg, var(--father-lighter) 0%, var(--father-light) 100%);
+  border: 2px solid var(--father-accent);
+  border-radius: 8px;
+  padding: 1rem;
+  font-weight: 500;
+  opacity: 1.0;
 }
 
 /* Typography hierarchy */
@@ -189,8 +189,8 @@ body {
 }
 
 .father-event-text {
-  font-size: 0.8125rem;
-  font-weight: 400;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--father-text);
 }
 

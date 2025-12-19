@@ -20,6 +20,7 @@ export interface SchoolSchedule {
   address: string;
   phone: string;
   getScheduleForDate: (date: Date) => SchoolDay;
+  getSpringBreakDates: (year: number) => { start: Date; end: Date } | null;
 }
 
 // Thornhill Elementary School Schedule 2025-26
@@ -198,11 +199,68 @@ function getScheduleForDate(date: Date): SchoolDay {
   };
 }
 
+// Get spring break dates for a given year
+function getSpringBreakDates(year: number): { start: Date; end: Date } | null {
+  // Spring Break dates are defined in the NO_SCHOOL_DAYS array
+  // Look for consecutive non-school days in March-April that represent spring break
+
+  // Known spring breaks:
+  if (year === 2026) {
+    // Spring Break 2026: April 6-10 (Mon-Fri)
+    return {
+      start: new Date(2026, 3, 6),  // April 6
+      end: new Date(2026, 3, 10),   // April 10
+    };
+  }
+
+  // For other years, detect spring break by finding consecutive no-school days in March/April
+  // This is a heuristic: look for 5+ consecutive weekdays off in March-April
+  const marchStart = new Date(year, 2, 1); // March 1
+  const aprilEnd = new Date(year, 3, 30);  // April 30
+
+  let consecutiveDaysOff = 0;
+  let breakStart: Date | null = null;
+  let breakEnd: Date | null = null;
+
+  for (let d = new Date(marchStart); d <= aprilEnd; d.setDate(d.getDate() + 1)) {
+    const schedule = getScheduleForDate(new Date(d));
+    const dayOfWeek = d.getDay();
+
+    // Only count weekdays (Mon-Fri)
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      if (!schedule.isSchoolDay) {
+        if (consecutiveDaysOff === 0) {
+          breakStart = new Date(d);
+        }
+        consecutiveDaysOff++;
+        breakEnd = new Date(d);
+      } else {
+        // School day - reset counter
+        if (consecutiveDaysOff >= 5) {
+          // Found spring break (5+ consecutive weekdays off)
+          return { start: breakStart!, end: breakEnd! };
+        }
+        consecutiveDaysOff = 0;
+        breakStart = null;
+        breakEnd = null;
+      }
+    }
+  }
+
+  // Check if we ended with a break
+  if (consecutiveDaysOff >= 5 && breakStart && breakEnd) {
+    return { start: breakStart, end: breakEnd };
+  }
+
+  return null; // No spring break found
+}
+
 export const thornhillSchedule: SchoolSchedule = {
   schoolName: SCHOOL_INFO.name,
   address: SCHOOL_INFO.address,
   phone: SCHOOL_INFO.phone,
   getScheduleForDate,
+  getSpringBreakDates,
 };
 
 // Helper function to format pickup/dropoff description

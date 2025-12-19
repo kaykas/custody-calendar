@@ -33,6 +33,7 @@ export interface CustodyEvent {
   title: string;
   description?: string;
   priority: number;
+  courtOrderSection?: string; // Reference to court order section (e.g., "Section 12a", "Section 16c.i")
 }
 
 export interface HolidayRule {
@@ -242,6 +243,7 @@ export class CustodyCalendarEngine {
           title: 'Thursday Night',
           description: `${pickupDesc} → ${dropoffDesc}`,
           priority: 10,
+          courtOrderSection: 'Section 12a',
         });
       }
 
@@ -341,6 +343,7 @@ export class CustodyCalendarEngine {
         title: `${isFatherWeekend ? "Father's" : "Mother's"} Weekend${isMondayHoliday ? ' (Extended)' : ''}`,
         description: `${pickupDesc} → ${dropoffDesc}`,
         priority: 20,
+        courtOrderSection: isMondayHoliday ? 'Section 12b, 12d' : 'Section 12b',
       });
 
       currentWeekend = addWeeks(currentWeekend, 2);
@@ -393,6 +396,7 @@ export class CustodyCalendarEngine {
             isMotherWeek ? "Mother's" : "Father's"
           } week (Court Order Section 14c)`,
           priority: 50,
+          courtOrderSection: 'Section 14c',
         });
       }
 
@@ -541,6 +545,7 @@ export class CustodyCalendarEngine {
             title: holiday.name,
             description: `Holiday custody - ${holiday.parent}'s ${holiday.yearParity} year`,
             priority: holiday.priority,
+            courtOrderSection: holiday.name === 'Halloween' ? 'Section 16a' : (holiday.name === "Mother's Day" || holiday.name === "Father's Day") ? 'Section 18' : 'Section 16',
           });
         }
       }
@@ -621,6 +626,7 @@ export class CustodyCalendarEngine {
         title: `Thanksgiving Break ${year} - First Half`,
         description: `Court Order Section 16b: ${isEvenYear ? 'Even' : 'Odd'} year - ${firstHalfParent === 'mother' ? 'Mother' : 'Father'} gets first half (Friday 6 PM → Wednesday noon)`,
         priority: 100,
+        courtOrderSection: isEvenYear ? 'Section 16b.ii' : 'Section 16b.i',
       });
 
       // Second half: Wednesday noon → Sunday 6 PM
@@ -633,6 +639,7 @@ export class CustodyCalendarEngine {
         title: `Thanksgiving Break ${year} - Second Half`,
         description: `Court Order Section 16b: ${isEvenYear ? 'Even' : 'Odd'} year - ${secondHalfParent === 'mother' ? 'Mother' : 'Father'} gets second half (Wednesday noon → Sunday 6 PM)`,
         priority: 100,
+        courtOrderSection: isEvenYear ? 'Section 16b.ii' : 'Section 16b.i',
       });
     }
 
@@ -661,40 +668,63 @@ export class CustodyCalendarEngine {
     for (let year = startYear; year <= endYear; year++) {
       const isEvenYear = year % 2 === 0;
 
-      // TODO: Get actual spring break dates from school calendar
-      // Using approximate date: Monday March 15 as mid-point of typical spring break week
-      // Typical spring break: Friday before through Sunday after (9 days)
-      const approximateMidpoint = new Date(year, 2, 15); // March 15
+      // Get actual spring break dates from school calendar
+      const springBreakDates = thornhillSchedule.getSpringBreakDates(year);
+      if (!springBreakDates) {
+        continue; // No spring break defined for this year
+      }
 
-      // Find the Monday closest to March 15 (this will be mid-break)
-      const dayOfWeek = getDay(approximateMidpoint);
-      const daysToMonday = dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
-      const midBreakMonday = addDays(approximateMidpoint, daysToMonday);
+      const { start: breakFirstDay, end: breakLastDay } = springBreakDates;
 
-      // Spring break: Friday before through Sunday after (9 days total)
-      const fridayBefore = addDays(midBreakMonday, -3); // Previous Friday
-      const sundayAfter = addDays(midBreakMonday, 6); // Sunday after (includes Sat-Sun)
+      // Find last school day before break (for pickup)
+      let lastDayBeforeBreak = addDays(breakFirstDay, -1);
+      while (!thornhillSchedule.getScheduleForDate(lastDayBeforeBreak).isSchoolDay) {
+        lastDayBeforeBreak = addDays(lastDayBeforeBreak, -1);
+      }
 
+      // Find first school day after break (for dropoff)
+      let firstDayAfterBreak = addDays(breakLastDay, 1);
+      while (!thornhillSchedule.getScheduleForDate(firstDayAfterBreak).isSchoolDay) {
+        firstDayAfterBreak = addDays(firstDayAfterBreak, 1);
+      }
+
+      // Get school dismissal/start times
+      const lastDaySchedule = thornhillSchedule.getScheduleForDate(lastDayBeforeBreak);
+      const firstDaySchedule = thornhillSchedule.getScheduleForDate(firstDayAfterBreak);
+
+      // Parse dismissal time for pickup
+      const dismissalTime = lastDaySchedule.dismissalTime.secondGrade;
+      const [time, period] = dismissalTime.split(' ');
+      const [hourStr, minuteStr] = time.split(':');
+      let pickupHour = parseInt(hourStr);
+      const pickupMinute = parseInt(minuteStr);
+      if (period === 'PM' && pickupHour !== 12) {
+        pickupHour += 12;
+      } else if (period === 'AM' && pickupHour === 12) {
+        pickupHour = 0;
+      }
+
+      // Start: Last school day at dismissal
       const breakStart = createPacificDate(
-        fridayBefore.getFullYear(),
-        fridayBefore.getMonth(),
-        fridayBefore.getDate(),
-        15, 0, 0 // 3:00 PM Friday (school pickup - approximate)
+        lastDayBeforeBreak.getFullYear(),
+        lastDayBeforeBreak.getMonth(),
+        lastDayBeforeBreak.getDate(),
+        pickupHour, pickupMinute, 0
       );
 
-      const midBreak = createPacificDate(
-        midBreakMonday.getFullYear(),
-        midBreakMonday.getMonth(),
-        midBreakMonday.getDate(),
-        12, 0, 0 // Noon Monday (mid-break)
-      );
-
+      // End: First school day back at 8 AM (school dropoff)
       const breakEnd = createPacificDate(
-        sundayAfter.getFullYear(),
-        sundayAfter.getMonth(),
-        sundayAfter.getDate(),
-        20, 0, 0 // 8:00 PM Sunday
+        firstDayAfterBreak.getFullYear(),
+        firstDayAfterBreak.getMonth(),
+        firstDayAfterBreak.getDate(),
+        8, 0, 0
       );
+
+      // Calculate midpoint (halfway through break)
+      const breakStartTime = breakStart.getTime();
+      const breakEndTime = breakEnd.getTime();
+      const midpointTime = breakStartTime + (breakEndTime - breakStartTime) / 2;
+      const midBreak = new Date(midpointTime);
 
       // Check if within requested date range
       if (breakEnd < startDate || breakStart > endDate) {
@@ -707,7 +737,9 @@ export class CustodyCalendarEngine {
       const firstHalfParent = isEvenYear ? 'mother' : 'father';
       const secondHalfParent = isEvenYear ? 'father' : 'mother';
 
-      // First half: Friday 3 PM → Monday noon
+      // First half: Last school day → midpoint
+      const firstHalfDesc = `Court Order Section 16e: ${isEvenYear ? 'Even' : 'Odd'} year - ${firstHalfParent === 'mother' ? 'Mother' : 'Father'} gets first half (${getPickupDropoffDescription(lastDayBeforeBreak, true, dismissalTime)} → Mid-break exchange ${format(midBreak, 'MMM dd h:mm a')})`;
+
       events.push({
         id: `spring-break-${year}-first`,
         startDate: breakStart,
@@ -715,11 +747,14 @@ export class CustodyCalendarEngine {
         custodyType: 'holiday',
         parent: firstHalfParent,
         title: `Spring Break ${year} - First Half`,
-        description: `Court Order Section 16e: ${isEvenYear ? 'Even' : 'Odd'} year - ${firstHalfParent === 'mother' ? 'Mother' : 'Father'} gets first half (approx dates - needs school calendar)`,
+        description: firstHalfDesc,
         priority: 100,
+        courtOrderSection: isEvenYear ? 'Section 16e.iv' : 'Section 16e.iii',
       });
 
-      // Second half: Monday noon → Sunday 8 PM
+      // Second half: Midpoint → first school day back
+      const secondHalfDesc = `Court Order Section 16e: ${isEvenYear ? 'Even' : 'Odd'} year - ${secondHalfParent === 'mother' ? 'Mother' : 'Father'} gets second half (Mid-break exchange ${format(midBreak, 'MMM dd h:mm a')} → ${getPickupDropoffDescription(firstDayAfterBreak, false, '8:00 AM')})`;
+
       events.push({
         id: `spring-break-${year}-second`,
         startDate: midBreak,
@@ -727,8 +762,9 @@ export class CustodyCalendarEngine {
         custodyType: 'holiday',
         parent: secondHalfParent,
         title: `Spring Break ${year} - Second Half`,
-        description: `Court Order Section 16e: ${isEvenYear ? 'Even' : 'Odd'} year - ${secondHalfParent === 'mother' ? 'Mother' : 'Father'} gets second half (approx dates - needs school calendar)`,
+        description: secondHalfDesc,
         priority: 100,
+        courtOrderSection: isEvenYear ? 'Section 16e.iv' : 'Section 16e.iii',
       });
     }
 
@@ -784,6 +820,7 @@ export class CustodyCalendarEngine {
           title: 'Winter Break 2025 - Period 1',
           description: `Pickup at ${thornhillSchedule.schoolName} after dismissal (Basil: ${dec18Schedule.dismissalTime.secondGrade}, Alfie: ${dec18Schedule.dismissalTime.kindergarten}) on Dec 18 - Minimum Day → Exchange at Father's home, curbside at 11:00 AM on Dec 22`,
           priority: 200,
+          courtOrderSection: 'Section 16c.i',
         });
 
         // Period 2: Father: Dec 22 at 11am → Dec 25 at 11am (Section 16c.ii)
@@ -796,6 +833,7 @@ export class CustodyCalendarEngine {
           title: 'Winter Break 2025 - Period 2',
           description: 'Exchange at Father\'s home, curbside at 11:00 AM on Dec 22 → Exchange at Mother\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day)',
           priority: 200,
+          courtOrderSection: 'Section 16c.ii',
         });
 
         // Period 3: Mother: Dec 25 at 11am → Dec 29 at 11am (Section 16c.iii)
@@ -808,6 +846,7 @@ export class CustodyCalendarEngine {
           title: 'Winter Break 2025 - Period 3',
           description: 'Exchange at Mother\'s home, curbside at 11:00 AM on Dec 25 (Christmas Day) → Exchange at Father\'s home, curbside at 11:00 AM on Dec 29',
           priority: 200,
+          courtOrderSection: 'Section 16c.iii',
         });
 
         // Period 4: Father: Dec 29 at 11am → Jan 2 at 11am (Section 16c.iv)
@@ -820,6 +859,7 @@ export class CustodyCalendarEngine {
           title: 'Winter Break 2025 - Period 4',
           description: 'Exchange at Father\'s home, curbside at 11:00 AM on Dec 29 → Exchange at Mother\'s home, curbside at 11:00 AM on Jan 2 (includes Scott\'s birthday Dec 31)',
           priority: 200,
+          courtOrderSection: 'Section 16c.iv',
         });
 
         // Period 5: Mother: Jan 2 at 11am → Jan 6 school dropoff (Section 16c.v)
@@ -835,6 +875,7 @@ export class CustodyCalendarEngine {
           title: 'Winter Break 2025 - Period 5',
           description: `Exchange at Mother's home, curbside at 11:00 AM on Jan 2 → Dropoff at ${thornhillSchedule.schoolName} for school start (Basil: ${jan6Schedule.dropoffTime.secondGrade}, Alfie: ${jan6Schedule.dropoffTime.kindergarten}) on Jan 6 (first day back - Jan 5 is PD day)`,
           priority: 200,
+          courtOrderSection: 'Section 16c.v',
         });
     }
 
@@ -887,6 +928,7 @@ export class CustodyCalendarEngine {
         title: `Winter Break ${year} - First Half`,
         description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${firstHalfParent} gets first half`,
         priority: 100,
+        courtOrderSection: isEvenYear ? 'Section 16d.iv' : 'Section 16d.iii',
       });
 
       events.push({
@@ -898,6 +940,7 @@ export class CustodyCalendarEngine {
         title: `Winter Break ${year} - Second Half`,
         description: `Winter break ${isEvenYear ? 'even' : 'odd'} year - ${secondHalfParent} gets second half`,
         priority: 100,
+        courtOrderSection: isEvenYear ? 'Section 16d.iv' : 'Section 16d.iii',
       });
     }
 
@@ -952,6 +995,7 @@ export class CustodyCalendarEngine {
           title: "Mother's Birthday",
           description: `Court Order Section 17: 9:00 AM Oct 2 → ${endDesc}`,
           priority: 150,
+          courtOrderSection: 'Section 17',
         });
       }
 
@@ -980,6 +1024,7 @@ export class CustodyCalendarEngine {
           title: "Father's Birthday",
           description: `Court Order Section 17: 9:00 AM Dec 31 → ${endDesc}`,
           priority: 150,
+          courtOrderSection: 'Section 17',
         });
       }
     }
